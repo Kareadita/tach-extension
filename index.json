@@ -911,19 +911,19 @@
   {
     "name": "Tachiyomi: Arc-Relight",
     "pkg": "eu.kanade.tachiyomi.extension.en.arcrelight",
-    "apk": "tachiyomi-en.arcrelight-v1.2.3.apk",
+    "apk": "tachiyomi-en.arcrelight-v1.2.4.apk",
     "lang": "en",
-    "code": 3,
-    "version": "1.2.3",
+    "code": 4,
+    "version": "1.2.4",
     "nsfw": 0
   },
   {
     "name": "Tachiyomi: Assorted Scans",
     "pkg": "eu.kanade.tachiyomi.extension.en.assortedscans",
-    "apk": "tachiyomi-en.assortedscans-v1.2.3.apk",
+    "apk": "tachiyomi-en.assortedscans-v1.2.4.apk",
     "lang": "en",
-    "code": 3,
-    "version": "1.2.3",
+    "code": 4,
+    "version": "1.2.4",
     "nsfw": 0
   },
   {
@@ -1460,10 +1460,10 @@
   {
     "name": "Tachiyomi: Helvetica Scans",
     "pkg": "eu.kanade.tachiyomi.extension.en.helveticascans",
-    "apk": "tachiyomi-en.helveticascans-v1.2.3.apk",
+    "apk": "tachiyomi-en.helveticascans-v1.2.4.apk",
     "lang": "en",
-    "code": 3,
-    "version": "1.2.3",
+    "code": 4,
+    "version": "1.2.4",
     "nsfw": 0
   },
   {
@@ -7445,10 +7445,10 @@
   {
     "name": "Tachiyomi: CopyManga",
     "pkg": "eu.kanade.tachiyomi.extension.zh.copymanga",
-    "apk": "tachiyomi-zh.copymanga-v1.2.10.apk",
+    "apk": "tachiyomi-zh.copymanga-v1.2.11.apk",
     "lang": "zh",
-    "code": 10,
-    "version": "1.2.10",
+    "code": 11,
+    "version": "1.2.11",
     "nsfw": 0
   },
   {
