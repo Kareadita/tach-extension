@@ -614,10 +614,10 @@
   {
     "name": "Tachiyomi: مانجا العرب",
     "pkg": "eu.kanade.tachiyomi.extension.ar.mangaalarab",
-    "apk": "tachiyomi-ar.mangaalarab-v1.2.1.apk",
+    "apk": "tachiyomi-ar.mangaalarab-v1.2.2.apk",
     "lang": "ar",
-    "code": 1,
-    "version": "1.2.1",
+    "code": 2,
+    "version": "1.2.2",
     "nsfw": 0
   },
   {
@@ -1195,6 +1195,15 @@
     "code": 3,
     "version": "1.2.3",
     "nsfw": 1
+  },
+  {
+    "name": "Tachiyomi: DragonTea",
+    "pkg": "eu.kanade.tachiyomi.extension.en.dragontea",
+    "apk": "tachiyomi-en.dragontea-v1.2.7.apk",
+    "lang": "en",
+    "code": 7,
+    "version": "1.2.7",
+    "nsfw": 0
   },
   {
     "name": "Tachiyomi: Dream Manga",
