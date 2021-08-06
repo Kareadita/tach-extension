@@ -5355,17 +5355,17 @@
   {
     "name": "Tachiyomi: Asgard Team",
     "pkg": "eu.kanade.tachiyomi.extension.ar.asgardteam",
-    "apk": "tachiyomi-ar.asgardteam-v1.2.9.apk",
+    "apk": "tachiyomi-ar.asgardteam-v1.2.10.apk",
     "lang": "ar",
-    "code": 9,
-    "version": "1.2.9",
+    "code": 10,
+    "version": "1.2.10",
     "nsfw": 0,
     "sources": [
       {
-        "name": "Asgard Team",
+        "name": "AsgardTeam",
         "lang": "ar",
-        "id": "6866501712274278283",
-        "baseUrl": "https://www.asgard1team.com",
+        "id": "840937957705866650",
+        "baseUrl": "https://asgard1team.com",
         "nsfw": false
       }
     ]
@@ -6651,10 +6651,10 @@
   {
     "name": "Tachiyomi: Dilbert",
     "pkg": "eu.kanade.tachiyomi.extension.en.dilbert",
-    "apk": "tachiyomi-en.dilbert-v1.2.3.apk",
+    "apk": "tachiyomi-en.dilbert-v1.2.4.apk",
     "lang": "en",
-    "code": 3,
-    "version": "1.2.3",
+    "code": 4,
+    "version": "1.2.4",
     "nsfw": 0,
     "sources": [
       {
@@ -9505,10 +9505,10 @@
   {
     "name": "Tachiyomi: MangaOwl",
     "pkg": "eu.kanade.tachiyomi.extension.en.mangaowl",
-    "apk": "tachiyomi-en.mangaowl-v1.2.18.apk",
+    "apk": "tachiyomi-en.mangaowl-v1.2.19.apk",
     "lang": "en",
-    "code": 18,
-    "version": "1.2.18",
+    "code": 19,
+    "version": "1.2.19",
     "nsfw": 0,
     "sources": [
       {
@@ -16938,10 +16938,10 @@
   {
     "name": "Tachiyomi: Geass Scanlator",
     "pkg": "eu.kanade.tachiyomi.extension.pt.geassscanlator",
-    "apk": "tachiyomi-pt.geassscanlator-v1.2.10.apk",
+    "apk": "tachiyomi-pt.geassscanlator-v1.2.11.apk",
     "lang": "pt-BR",
-    "code": 10,
-    "version": "1.2.10",
+    "code": 11,
+    "version": "1.2.11",
     "nsfw": 0,
     "sources": [
       {
@@ -17244,10 +17244,10 @@
   {
     "name": "Tachiyomi: MangaYabu!",
     "pkg": "eu.kanade.tachiyomi.extension.pt.mangayabu",
-    "apk": "tachiyomi-pt.mangayabu-v1.2.9.apk",
+    "apk": "tachiyomi-pt.mangayabu-v1.2.10.apk",
     "lang": "pt-BR",
-    "code": 9,
-    "version": "1.2.9",
+    "code": 10,
+    "version": "1.2.10",
     "nsfw": 0,
     "sources": [
       {
@@ -17512,6 +17512,24 @@
     ]
   },
   {
+    "name": "Tachiyomi: Rachel Scanlator",
+    "pkg": "eu.kanade.tachiyomi.extension.pt.rachelscanlator",
+    "apk": "tachiyomi-pt.rachelscanlator-v1.2.8.apk",
+    "lang": "pt-BR",
+    "code": 8,
+    "version": "1.2.8",
+    "nsfw": 1,
+    "sources": [
+      {
+        "name": "Rachel Scanlator",
+        "lang": "pt-BR",
+        "id": "6882798559431929878",
+        "baseUrl": "https://rachelscanlator.tk",
+        "nsfw": true
+      }
+    ]
+  },
+  {
     "name": "Tachiyomi: Random Scan",
     "pkg": "eu.kanade.tachiyomi.extension.pt.randomscan",
     "apk": "tachiyomi-pt.randomscan-v1.2.12.apk",
@@ -17586,18 +17604,18 @@
   {
     "name": "Tachiyomi: Silence Scan",
     "pkg": "eu.kanade.tachiyomi.extension.pt.silencescan",
-    "apk": "tachiyomi-pt.silencescan-v1.2.12.apk",
+    "apk": "tachiyomi-pt.silencescan-v1.2.13.apk",
     "lang": "pt-BR",
-    "code": 12,
-    "version": "1.2.12",
-    "nsfw": 0,
+    "code": 13,
+    "version": "1.2.13",
+    "nsfw": 1,
     "sources": [
       {
         "name": "Silence Scan",
         "lang": "pt-BR",
-        "id": "6945633903177917573",
-        "baseUrl": "https://silencescan.net",
-        "nsfw": false
+        "id": "4570883624419126858",
+        "baseUrl": "https://silencescan.com.br",
+        "nsfw": true
       }
     ]
   },
@@ -17670,6 +17688,24 @@
         "id": "784276282691018699",
         "baseUrl": "https://taosect.com",
         "nsfw": false
+      }
+    ]
+  },
+  {
+    "name": "Tachiyomi: Tatakae Scan",
+    "pkg": "eu.kanade.tachiyomi.extension.pt.tatakaescan",
+    "apk": "tachiyomi-pt.tatakaescan-v1.2.8.apk",
+    "lang": "pt-BR",
+    "code": 8,
+    "version": "1.2.8",
+    "nsfw": 1,
+    "sources": [
+      {
+        "name": "Tatakae Scan",
+        "lang": "pt-BR",
+        "id": "7640190247679480703",
+        "baseUrl": "https://tatakaescan.xyz",
+        "nsfw": true
       }
     ]
   },
