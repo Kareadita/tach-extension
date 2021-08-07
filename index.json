@@ -3905,10 +3905,10 @@
   {
     "name": "Tachiyomi: MANGA Plus by SHUEISHA",
     "pkg": "eu.kanade.tachiyomi.extension.all.mangaplus",
-    "apk": "tachiyomi-all.mangaplus-v1.2.21.apk",
+    "apk": "tachiyomi-all.mangaplus-v1.2.22.apk",
     "lang": "all",
-    "code": 21,
-    "version": "1.2.21",
+    "code": 22,
+    "version": "1.2.22",
     "nsfw": 0,
     "sources": [
       {
@@ -5330,24 +5330,6 @@
         "lang": "ar",
         "id": "107810123708352143",
         "baseUrl": "https://akumanga.com",
-        "nsfw": false
-      }
-    ]
-  },
-  {
-    "name": "Tachiyomi: ArabMkr",
-    "pkg": "eu.kanade.tachiyomi.extension.ar.arabmkr",
-    "apk": "tachiyomi-ar.arabmkr-v1.2.8.apk",
-    "lang": "ar",
-    "code": 8,
-    "version": "1.2.8",
-    "nsfw": 0,
-    "sources": [
-      {
-        "name": "ArabMkr",
-        "lang": "ar",
-        "id": "6949150816004945831",
-        "baseUrl": "https://arabmkr.me",
         "nsfw": false
       }
     ]
@@ -17208,10 +17190,10 @@
   {
     "name": "Tachiyomi: Leitor.net",
     "pkg": "eu.kanade.tachiyomi.extension.pt.leitornet",
-    "apk": "tachiyomi-pt.leitornet-v1.2.7.apk",
+    "apk": "tachiyomi-pt.leitornet-v1.2.8.apk",
     "lang": "pt-BR",
-    "code": 7,
-    "version": "1.2.7",
+    "code": 8,
+    "version": "1.2.8",
     "nsfw": 1,
     "sources": [
       {
@@ -17280,10 +17262,10 @@
   {
     "name": "Tachiyomi: Mangá Livre",
     "pkg": "eu.kanade.tachiyomi.extension.pt.mangalivre",
-    "apk": "tachiyomi-pt.mangalivre-v1.2.7.apk",
+    "apk": "tachiyomi-pt.mangalivre-v1.2.8.apk",
     "lang": "pt-BR",
-    "code": 7,
-    "version": "1.2.7",
+    "code": 8,
+    "version": "1.2.8",
     "nsfw": 1,
     "sources": [
       {
@@ -17820,10 +17802,10 @@
   {
     "name": "Tachiyomi: Tsuki Mangás",
     "pkg": "eu.kanade.tachiyomi.extension.pt.tsukimangas",
-    "apk": "tachiyomi-pt.tsukimangas-v1.2.25.apk",
+    "apk": "tachiyomi-pt.tsukimangas-v1.2.27.apk",
     "lang": "pt-BR",
-    "code": 25,
-    "version": "1.2.25",
+    "code": 27,
+    "version": "1.2.27",
     "nsfw": 1,
     "sources": [
       {
@@ -18774,10 +18756,10 @@
   {
     "name": "Tachiyomi: MangaDenizi",
     "pkg": "eu.kanade.tachiyomi.extension.tr.mangadenizi",
-    "apk": "tachiyomi-tr.mangadenizi-v1.2.3.apk",
+    "apk": "tachiyomi-tr.mangadenizi-v1.2.4.apk",
     "lang": "tr",
-    "code": 3,
-    "version": "1.2.3",
+    "code": 4,
+    "version": "1.2.4",
     "nsfw": 0,
     "sources": [
       {
@@ -19404,10 +19386,10 @@
   {
     "name": "Tachiyomi: BainianManga",
     "pkg": "eu.kanade.tachiyomi.extension.zh.bainianmanga",
-    "apk": "tachiyomi-zh.bainianmanga-v1.2.2.apk",
+    "apk": "tachiyomi-zh.bainianmanga-v1.2.3.apk",
     "lang": "zh",
-    "code": 2,
-    "version": "1.2.2",
+    "code": 3,
+    "version": "1.2.3",
     "nsfw": 0,
     "sources": [
       {
