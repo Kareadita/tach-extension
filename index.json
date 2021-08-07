@@ -6273,10 +6273,10 @@
   {
     "name": "Tachiyomi: Bilibili Comics",
     "pkg": "eu.kanade.tachiyomi.extension.en.bilibilicomics",
-    "apk": "tachiyomi-en.bilibilicomics-v1.2.6.apk",
+    "apk": "tachiyomi-en.bilibilicomics-v1.2.7.apk",
     "lang": "en",
-    "code": 6,
-    "version": "1.2.6",
+    "code": 7,
+    "version": "1.2.7",
     "nsfw": 1,
     "sources": [
       {
@@ -7525,10 +7525,10 @@
   {
     "name": "Tachiyomi: HM2D",
     "pkg": "eu.kanade.tachiyomi.extension.en.hm2d",
-    "apk": "tachiyomi-en.hm2d-v1.2.8.apk",
+    "apk": "tachiyomi-en.hm2d-v1.2.9.apk",
     "lang": "en",
-    "code": 8,
-    "version": "1.2.8",
+    "code": 9,
+    "version": "1.2.9",
     "nsfw": 1,
     "sources": [
       {
@@ -12835,18 +12835,18 @@
   {
     "name": "Tachiyomi: Skymanga",
     "pkg": "eu.kanade.tachiyomi.extension.en.skymanga",
-    "apk": "tachiyomi-en.skymanga-v1.2.9.apk",
+    "apk": "tachiyomi-en.skymanga-v1.2.10.apk",
     "lang": "en",
-    "code": 9,
-    "version": "1.2.9",
-    "nsfw": 0,
+    "code": 10,
+    "version": "1.2.10",
+    "nsfw": 1,
     "sources": [
       {
         "name": "Skymanga",
         "lang": "en",
         "id": "2182162272870453900",
         "baseUrl": "https://skymanga.co",
-        "nsfw": false
+        "nsfw": true
       }
     ]
   },
@@ -16339,19 +16339,19 @@
     ]
   },
   {
-    "name": "Tachiyomi: RawLH",
+    "name": "Tachiyomi: WeLoveManga",
     "pkg": "eu.kanade.tachiyomi.extension.ja.rawlh",
-    "apk": "tachiyomi-ja.rawlh-v1.2.5.apk",
+    "apk": "tachiyomi-ja.rawlh-v1.2.6.apk",
     "lang": "ja",
-    "code": 5,
-    "version": "1.2.5",
+    "code": 6,
+    "version": "1.2.6",
     "nsfw": 0,
     "sources": [
       {
-        "name": "RawLH",
+        "name": "WeLoveManga",
         "lang": "ja",
         "id": "7595224096258102519",
-        "baseUrl": "https://lovehug.net",
+        "baseUrl": "https://weloma.net",
         "nsfw": false
       }
     ]
@@ -17316,10 +17316,10 @@
   {
     "name": "Tachiyomi: MangaYabu!",
     "pkg": "eu.kanade.tachiyomi.extension.pt.mangayabu",
-    "apk": "tachiyomi-pt.mangayabu-v1.2.10.apk",
+    "apk": "tachiyomi-pt.mangayabu-v1.2.11.apk",
     "lang": "pt-BR",
-    "code": 10,
-    "version": "1.2.10",
+    "code": 11,
+    "version": "1.2.11",
     "nsfw": 0,
     "sources": [
       {
