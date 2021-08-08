@@ -13283,6 +13283,24 @@
     ]
   },
   {
+    "name": "Tachiyomi: TOPTOON+",
+    "pkg": "eu.kanade.tachiyomi.extension.en.toptoonplus",
+    "apk": "tachiyomi-en.toptoonplus-v1.2.1.apk",
+    "lang": "en",
+    "code": 1,
+    "version": "1.2.1",
+    "nsfw": 1,
+    "sources": [
+      {
+        "name": "TOPTOON+",
+        "lang": "en",
+        "id": "6351996264463708982",
+        "baseUrl": "https://toptoonplus.com",
+        "nsfw": true
+      }
+    ]
+  },
+  {
     "name": "Tachiyomi: TreeManga",
     "pkg": "eu.kanade.tachiyomi.extension.en.treemanga",
     "apk": "tachiyomi-en.treemanga-v1.2.8.apk",
@@ -16545,14 +16563,14 @@
         "name": "ManaToki",
         "lang": "ko",
         "id": "2526381983439079467",
-        "baseUrl": "https://manatoki123.net",
+        "baseUrl": "https://manatoki124.net",
         "nsfw": false
       },
       {
         "name": "NewToki",
         "lang": "ko",
         "id": "1977818283770282459",
-        "baseUrl": "https://newtoki123.com",
+        "baseUrl": "https://newtoki124.com",
         "nsfw": false
       }
     ]
