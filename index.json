@@ -1787,16 +1787,16 @@
   {
     "name": "Tachiyomi: HentaiHand",
     "pkg": "eu.kanade.tachiyomi.extension.all.hentaihand",
-    "apk": "tachiyomi-all.hentaihand-v1.2.3.apk",
+    "apk": "tachiyomi-all.hentaihand-v1.2.4.apk",
     "lang": "all",
-    "code": 3,
-    "version": "1.2.3",
+    "code": 4,
+    "version": "1.2.4",
     "nsfw": 1,
     "sources": [
       {
         "name": "HentaiHand (Unfiltered)",
-        "lang": "other",
-        "id": "3019342035944531184",
+        "lang": "all",
+        "id": "1235047015955289468",
         "baseUrl": "https://hentaihand.com",
         "nsfw": true
       },
@@ -4787,10 +4787,10 @@
   {
     "name": "Tachiyomi: Simply Hentai",
     "pkg": "eu.kanade.tachiyomi.extension.all.simplyhentai",
-    "apk": "tachiyomi-all.simplyhentai-v1.2.3.apk",
+    "apk": "tachiyomi-all.simplyhentai-v1.2.4.apk",
     "lang": "all",
-    "code": 3,
-    "version": "1.2.3",
+    "code": 4,
+    "version": "1.2.4",
     "nsfw": 1,
     "sources": [
       {
@@ -8857,17 +8857,17 @@
   {
     "name": "Tachiyomi: Mangafreak",
     "pkg": "eu.kanade.tachiyomi.extension.en.mangafreak",
-    "apk": "tachiyomi-en.mangafreak-v1.2.3.apk",
+    "apk": "tachiyomi-en.mangafreak-v1.2.4.apk",
     "lang": "en",
-    "code": 3,
-    "version": "1.2.3",
+    "code": 4,
+    "version": "1.2.4",
     "nsfw": 0,
     "sources": [
       {
         "name": "Mangafreak",
         "lang": "en",
         "id": "1201694572804778862",
-        "baseUrl": "https://w11.mangafreak.net",
+        "baseUrl": "https://w12.mangafreak.net",
         "nsfw": false
       }
     ]
@@ -14768,10 +14768,10 @@
   {
     "name": "Tachiyomi: Kangaryu",
     "pkg": "eu.kanade.tachiyomi.extension.fr.kangaryu",
-    "apk": "tachiyomi-fr.kangaryu-v1.2.2.apk",
+    "apk": "tachiyomi-fr.kangaryu-v1.2.3.apk",
     "lang": "fr",
-    "code": 2,
-    "version": "1.2.2",
+    "code": 3,
+    "version": "1.2.3",
     "nsfw": 0,
     "sources": [
       {
@@ -16080,18 +16080,18 @@
     ]
   },
   {
-    "name": "Tachiyomi: The Phoenix Scans",
+    "name": "Tachiyomi: Phoenix Scans",
     "pkg": "eu.kanade.tachiyomi.extension.it.phoenixscans",
-    "apk": "tachiyomi-it.phoenixscans-v1.2.3.apk",
+    "apk": "tachiyomi-it.phoenixscans-v1.2.4.apk",
     "lang": "it",
-    "code": 3,
-    "version": "1.2.3",
+    "code": 4,
+    "version": "1.2.4",
     "nsfw": 0,
     "sources": [
       {
-        "name": "The Phoenix Scans",
+        "name": "Phoenix Scans",
         "lang": "it",
-        "id": "4929461831293651842",
+        "id": "6272882172599295519",
         "baseUrl": "https://www.phoenixscans.com",
         "nsfw": false
       }
