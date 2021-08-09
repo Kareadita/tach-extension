@@ -2444,10 +2444,10 @@
   {
     "name": "Tachiyomi: Komga",
     "pkg": "eu.kanade.tachiyomi.extension.all.komga",
-    "apk": "tachiyomi-all.komga-v1.2.29.apk",
+    "apk": "tachiyomi-all.komga-v1.2.30.apk",
     "lang": "all",
-    "code": 29,
-    "version": "1.2.29",
+    "code": 30,
+    "version": "1.2.30",
     "nsfw": 0,
     "sources": [
       {
@@ -8857,10 +8857,10 @@
   {
     "name": "Tachiyomi: Mangafreak",
     "pkg": "eu.kanade.tachiyomi.extension.en.mangafreak",
-    "apk": "tachiyomi-en.mangafreak-v1.2.4.apk",
+    "apk": "tachiyomi-en.mangafreak-v1.2.5.apk",
     "lang": "en",
-    "code": 4,
-    "version": "1.2.4",
+    "code": 5,
+    "version": "1.2.5",
     "nsfw": 0,
     "sources": [
       {
@@ -13015,17 +13015,17 @@
   {
     "name": "Tachiyomi: TCB Scans",
     "pkg": "eu.kanade.tachiyomi.extension.en.tcbscans",
-    "apk": "tachiyomi-en.tcbscans-v1.2.3.apk",
+    "apk": "tachiyomi-en.tcbscans-v1.2.4.apk",
     "lang": "en",
-    "code": 3,
-    "version": "1.2.3",
+    "code": 4,
+    "version": "1.2.4",
     "nsfw": 0,
     "sources": [
       {
         "name": "TCB Scans",
         "lang": "en",
         "id": "1435116756378369709",
-        "baseUrl": "https://onepiecechapters.com/",
+        "baseUrl": "https://onepiecechapters.com",
         "nsfw": false
       }
     ]
@@ -17316,10 +17316,10 @@
   {
     "name": "Tachiyomi: MangaTube",
     "pkg": "eu.kanade.tachiyomi.extension.pt.mangatube",
-    "apk": "tachiyomi-pt.mangatube-v1.2.3.apk",
+    "apk": "tachiyomi-pt.mangatube-v1.2.4.apk",
     "lang": "pt-BR",
-    "code": 3,
-    "version": "1.2.3",
+    "code": 4,
+    "version": "1.2.4",
     "nsfw": 0,
     "sources": [
       {
@@ -17364,6 +17364,24 @@
         "id": "1625075103965897034",
         "baseUrl": "https://markscans.online",
         "nsfw": false
+      }
+    ]
+  },
+  {
+    "name": "Tachiyomi: Meus Mangás",
+    "pkg": "eu.kanade.tachiyomi.extension.pt.meusmangas",
+    "apk": "tachiyomi-pt.meusmangas-v1.2.4.apk",
+    "lang": "pt-BR",
+    "code": 4,
+    "version": "1.2.4",
+    "nsfw": 1,
+    "sources": [
+      {
+        "name": "Meus Mangás",
+        "lang": "pt-BR",
+        "id": "5703232912641695558",
+        "baseUrl": "https://meusmangas.net",
+        "nsfw": true
       }
     ]
   },
