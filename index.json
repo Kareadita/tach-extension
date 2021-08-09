@@ -10729,10 +10729,10 @@
   {
     "name": "Tachiyomi: ManhwaNelo",
     "pkg": "eu.kanade.tachiyomi.extension.en.manhwanelo",
-    "apk": "tachiyomi-en.manhwanelo-v1.2.8.apk",
+    "apk": "tachiyomi-en.manhwanelo-v1.2.9.apk",
     "lang": "en",
-    "code": 8,
-    "version": "1.2.8",
+    "code": 9,
+    "version": "1.2.9",
     "nsfw": 0,
     "sources": [
       {
