@@ -3905,10 +3905,10 @@
   {
     "name": "Tachiyomi: MANGA Plus by SHUEISHA",
     "pkg": "eu.kanade.tachiyomi.extension.all.mangaplus",
-    "apk": "tachiyomi-all.mangaplus-v1.2.22.apk",
+    "apk": "tachiyomi-all.mangaplus-v1.2.23.apk",
     "lang": "all",
-    "code": 22,
-    "version": "1.2.22",
+    "code": 23,
+    "version": "1.2.23",
     "nsfw": 0,
     "sources": [
       {
@@ -3929,6 +3929,13 @@
         "name": "MANGA Plus by SHUEISHA",
         "lang": "pt-BR",
         "id": "3444662672352788181",
+        "baseUrl": "https://mangaplus.shueisha.co.jp",
+        "nsfw": false
+      },
+      {
+        "name": "MANGA Plus by SHUEISHA",
+        "lang": "ru",
+        "id": "3520485566708512181",
         "baseUrl": "https://mangaplus.shueisha.co.jp",
         "nsfw": false
       },
@@ -8639,24 +8646,6 @@
     ]
   },
   {
-    "name": "Tachiyomi: MangaDog",
-    "pkg": "eu.kanade.tachiyomi.extension.en.mangadog",
-    "apk": "tachiyomi-en.mangadog-v1.2.2.apk",
-    "lang": "en",
-    "code": 2,
-    "version": "1.2.2",
-    "nsfw": 0,
-    "sources": [
-      {
-        "name": "MangaDog",
-        "lang": "en",
-        "id": "3266285209111052954",
-        "baseUrl": "https://mangadog.club",
-        "nsfw": false
-      }
-    ]
-  },
-  {
     "name": "Tachiyomi: MangaDogs.fun",
     "pkg": "eu.kanade.tachiyomi.extension.en.mangadogsfun",
     "apk": "tachiyomi-en.mangadogsfun-v1.2.1.apk",
@@ -9541,10 +9530,10 @@
   {
     "name": "Tachiyomi: MangaOwl",
     "pkg": "eu.kanade.tachiyomi.extension.en.mangaowl",
-    "apk": "tachiyomi-en.mangaowl-v1.2.19.apk",
+    "apk": "tachiyomi-en.mangaowl-v1.2.20.apk",
     "lang": "en",
-    "code": 19,
-    "version": "1.2.19",
+    "code": 20,
+    "version": "1.2.20",
     "nsfw": 0,
     "sources": [
       {
@@ -17242,6 +17231,24 @@
     ]
   },
   {
+    "name": "Tachiyomi: Império Scans",
+    "pkg": "eu.kanade.tachiyomi.extension.pt.imperioscans",
+    "apk": "tachiyomi-pt.imperioscans-v1.2.8.apk",
+    "lang": "pt-BR",
+    "code": 8,
+    "version": "1.2.8",
+    "nsfw": 0,
+    "sources": [
+      {
+        "name": "Império Scans",
+        "lang": "pt-BR",
+        "id": "1369117541868504584",
+        "baseUrl": "https://imperioscans.com.br",
+        "nsfw": false
+      }
+    ]
+  },
+  {
     "name": "Tachiyomi: Leitor.net",
     "pkg": "eu.kanade.tachiyomi.extension.pt.leitornet",
     "apk": "tachiyomi-pt.leitornet-v1.2.8.apk",
@@ -17562,6 +17569,24 @@
         "id": "8768628699470468299",
         "baseUrl": "https://xxx.neoxscans.net",
         "nsfw": true
+      }
+    ]
+  },
+  {
+    "name": "Tachiyomi: Ninja Scan",
+    "pkg": "eu.kanade.tachiyomi.extension.pt.ninjascan",
+    "apk": "tachiyomi-pt.ninjascan-v1.2.8.apk",
+    "lang": "pt-BR",
+    "code": 8,
+    "version": "1.2.8",
+    "nsfw": 0,
+    "sources": [
+      {
+        "name": "Ninja Scan",
+        "lang": "pt-BR",
+        "id": "4392067503694697213",
+        "baseUrl": "https://ninjascan.xyz",
+        "nsfw": false
       }
     ]
   },
