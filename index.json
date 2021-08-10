@@ -10117,10 +10117,10 @@
   {
     "name": "Tachiyomi: Manga Weebs",
     "pkg": "eu.kanade.tachiyomi.extension.en.mangaweebs",
-    "apk": "tachiyomi-en.mangaweebs-v1.2.12.apk",
+    "apk": "tachiyomi-en.mangaweebs-v1.2.13.apk",
     "lang": "en",
-    "code": 12,
-    "version": "1.2.12",
+    "code": 13,
+    "version": "1.2.13",
     "nsfw": 0,
     "sources": [
       {
@@ -13859,6 +13859,24 @@
     ]
   },
   {
+    "name": "Tachiyomi: Yaoi Hentai",
+    "pkg": "eu.kanade.tachiyomi.extension.en.yaoihentai",
+    "apk": "tachiyomi-en.yaoihentai-v1.2.8.apk",
+    "lang": "en",
+    "code": 8,
+    "version": "1.2.8",
+    "nsfw": 1,
+    "sources": [
+      {
+        "name": "Yaoi Hentai",
+        "lang": "en",
+        "id": "5370949647322139237",
+        "baseUrl": "https://yaoihentai.me",
+        "nsfw": true
+      }
+    ]
+  },
+  {
     "name": "Tachiyomi: Yaoi.mobi",
     "pkg": "eu.kanade.tachiyomi.extension.en.yaoimanga",
     "apk": "tachiyomi-en.yaoimanga-v1.2.12.apk",
@@ -13890,6 +13908,24 @@
         "lang": "en",
         "id": "4439807782838127935",
         "baseUrl": "https://yaoiscan.com",
+        "nsfw": true
+      }
+    ]
+  },
+  {
+    "name": "Tachiyomi: YaoiToon",
+    "pkg": "eu.kanade.tachiyomi.extension.en.yaoitoon",
+    "apk": "tachiyomi-en.yaoitoon-v1.2.8.apk",
+    "lang": "en",
+    "code": 8,
+    "version": "1.2.8",
+    "nsfw": 1,
+    "sources": [
+      {
+        "name": "YaoiToon",
+        "lang": "en",
+        "id": "8248096529658387808",
+        "baseUrl": "https://yaoitoon.com",
         "nsfw": true
       }
     ]
