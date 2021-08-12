@@ -6026,6 +6026,24 @@
     ]
   },
   {
+    "name": "Tachiyomi: Alpha Scans",
+    "pkg": "eu.kanade.tachiyomi.extension.en.alphascans",
+    "apk": "tachiyomi-en.alphascans-v1.2.8.apk",
+    "lang": "en",
+    "code": 8,
+    "version": "1.2.8",
+    "nsfw": 0,
+    "sources": [
+      {
+        "name": "Alpha Scans",
+        "lang": "en",
+        "id": "4142958065526725213",
+        "baseUrl": "https://alpha-scans.org",
+        "nsfw": false
+      }
+    ]
+  },
+  {
     "name": "Tachiyomi: Anata no Motokare",
     "pkg": "eu.kanade.tachiyomi.extension.en.anatanomotokare",
     "apk": "tachiyomi-en.anatanomotokare-v1.2.3.apk",
@@ -6046,10 +6064,10 @@
   {
     "name": "Tachiyomi: Anitation Arts",
     "pkg": "eu.kanade.tachiyomi.extension.en.anitationarts",
-    "apk": "tachiyomi-en.anitationarts-v1.2.8.apk",
+    "apk": "tachiyomi-en.anitationarts-v1.2.9.apk",
     "lang": "en",
-    "code": 8,
-    "version": "1.2.8",
+    "code": 9,
+    "version": "1.2.9",
     "nsfw": 0,
     "sources": [
       {
@@ -10500,6 +10518,24 @@
     ]
   },
   {
+    "name": "Tachiyomi: Manhua Raw",
+    "pkg": "eu.kanade.tachiyomi.extension.en.manhuaraw",
+    "apk": "tachiyomi-en.manhuaraw-v1.2.8.apk",
+    "lang": "en",
+    "code": 8,
+    "version": "1.2.8",
+    "nsfw": 0,
+    "sources": [
+      {
+        "name": "Manhua Raw",
+        "lang": "en",
+        "id": "4465049301467888128",
+        "baseUrl": "https://manhuaraw.com",
+        "nsfw": false
+      }
+    ]
+  },
+  {
     "name": "Tachiyomi: Manhuas.net",
     "pkg": "eu.kanade.tachiyomi.extension.en.manhuasnet",
     "apk": "tachiyomi-en.manhuasnet-v1.2.10.apk",
@@ -11450,6 +11486,24 @@
         "id": "7272925320009596464",
         "baseUrl": "https://ohnomanga.com",
         "nsfw": true
+      }
+    ]
+  },
+  {
+    "name": "Tachiyomi: oots",
+    "pkg": "eu.kanade.tachiyomi.extension.en.oots",
+    "apk": "tachiyomi-en.oots-v1.2.1.apk",
+    "lang": "en",
+    "code": 1,
+    "version": "1.2.1",
+    "nsfw": 0,
+    "sources": [
+      {
+        "name": "The Order Of The Stick (OOTS)",
+        "lang": "en",
+        "id": "6973362428290892964",
+        "baseUrl": "https://www.giantitp.com",
+        "nsfw": false
       }
     ]
   },
