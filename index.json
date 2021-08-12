@@ -6188,6 +6188,24 @@
     ]
   },
   {
+    "name": "Tachiyomi: Asura Raw",
+    "pkg": "eu.kanade.tachiyomi.extension.en.asuraraw",
+    "apk": "tachiyomi-en.asuraraw-v1.2.8.apk",
+    "lang": "en",
+    "code": 8,
+    "version": "1.2.8",
+    "nsfw": 0,
+    "sources": [
+      {
+        "name": "Asura Raw",
+        "lang": "en",
+        "id": "7485516252085751647",
+        "baseUrl": "https://asuraraw.com",
+        "nsfw": false
+      }
+    ]
+  },
+  {
     "name": "Tachiyomi: Asura Scans",
     "pkg": "eu.kanade.tachiyomi.extension.en.asurascans",
     "apk": "tachiyomi-en.asurascans-v1.2.14.apk",
@@ -10140,6 +10158,24 @@
     ]
   },
   {
+    "name": "Tachiyomi: Manga-TX",
+    "pkg": "eu.kanade.tachiyomi.extension.en.mangatxunoriginal",
+    "apk": "tachiyomi-en.mangatxunoriginal-v1.2.8.apk",
+    "lang": "en",
+    "code": 8,
+    "version": "1.2.8",
+    "nsfw": 0,
+    "sources": [
+      {
+        "name": "Manga-TX",
+        "lang": "en",
+        "id": "3683271326486389724",
+        "baseUrl": "https://manga-tx.com",
+        "nsfw": false
+      }
+    ]
+  },
+  {
     "name": "Tachiyomi: MangaUS",
     "pkg": "eu.kanade.tachiyomi.extension.en.mangaus",
     "apk": "tachiyomi-en.mangaus-v1.2.10.apk",
@@ -10675,6 +10711,24 @@
         "lang": "en",
         "id": "8997140045479125847",
         "baseUrl": "https://manhwa18.org",
+        "nsfw": true
+      }
+    ]
+  },
+  {
+    "name": "Tachiyomi: Manhwa365",
+    "pkg": "eu.kanade.tachiyomi.extension.en.manhwa365",
+    "apk": "tachiyomi-en.manhwa365-v1.2.8.apk",
+    "lang": "en",
+    "code": 8,
+    "version": "1.2.8",
+    "nsfw": 1,
+    "sources": [
+      {
+        "name": "Manhwa365",
+        "lang": "en",
+        "id": "1949781752863461195",
+        "baseUrl": "https://manhwa365.com",
         "nsfw": true
       }
     ]
