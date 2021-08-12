@@ -7998,6 +7998,24 @@
     ]
   },
   {
+    "name": "Tachiyomi: Lara Manga",
+    "pkg": "eu.kanade.tachiyomi.extension.en.laramanga",
+    "apk": "tachiyomi-en.laramanga-v1.2.8.apk",
+    "lang": "en",
+    "code": 8,
+    "version": "1.2.8",
+    "nsfw": 0,
+    "sources": [
+      {
+        "name": "Lara Manga",
+        "lang": "en",
+        "id": "493173131380798334",
+        "baseUrl": "https://laramanga.com",
+        "nsfw": false
+      }
+    ]
+  },
+  {
     "name": "Tachiyomi: Latest Manga",
     "pkg": "eu.kanade.tachiyomi.extension.en.latestmanga",
     "apk": "tachiyomi-en.latestmanga-v1.2.8.apk",
@@ -9008,10 +9026,10 @@
   {
     "name": "Tachiyomi: Mangahub",
     "pkg": "eu.kanade.tachiyomi.extension.en.mangahub",
-    "apk": "tachiyomi-en.mangahub-v1.2.7.apk",
+    "apk": "tachiyomi-en.mangahub-v1.2.8.apk",
     "lang": "en",
-    "code": 7,
-    "version": "1.2.7",
+    "code": 8,
+    "version": "1.2.8",
     "nsfw": 0,
     "sources": [
       {
@@ -9596,6 +9614,24 @@
         "id": "6744809947193901777",
         "baseUrl": "https://mangapl.com",
         "nsfw": true
+      }
+    ]
+  },
+  {
+    "name": "Tachiyomi: Manga Queen",
+    "pkg": "eu.kanade.tachiyomi.extension.en.mangaqueen",
+    "apk": "tachiyomi-en.mangaqueen-v1.2.8.apk",
+    "lang": "en",
+    "code": 8,
+    "version": "1.2.8",
+    "nsfw": 0,
+    "sources": [
+      {
+        "name": "Manga Queen",
+        "lang": "en",
+        "id": "3439972132909506954",
+        "baseUrl": "https://mangaqueen.net",
+        "nsfw": false
       }
     ]
   },
@@ -19843,6 +19879,24 @@
         "lang": "zh",
         "id": "418374491144859437",
         "baseUrl": "http://qiximh1.com",
+        "nsfw": false
+      }
+    ]
+  },
+  {
+    "name": "Tachiyomi: Tencent Comics (ac.qq.com)",
+    "pkg": "eu.kanade.tachiyomi.extension.zh.tencentcomics",
+    "apk": "tachiyomi-zh.tencentcomics-v1.2.1.apk",
+    "lang": "zh",
+    "code": 1,
+    "version": "1.2.1",
+    "nsfw": 0,
+    "sources": [
+      {
+        "name": "Tencent Comics (ac.qq.com)",
+        "lang": "zh",
+        "id": "6353436350537369479",
+        "baseUrl": "https://m.ac.qq.com",
         "nsfw": false
       }
     ]
