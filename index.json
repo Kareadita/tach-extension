@@ -20062,5 +20062,23 @@
         "nsfw": false
       }
     ]
+  },
+  {
+    "name": "Tachiyomi: Zerobyw",
+    "pkg": "eu.kanade.tachiyomi.extension.zh.zerobyw",
+    "apk": "tachiyomi-zh.zerobyw-v1.2.1.apk",
+    "lang": "zh",
+    "code": 1,
+    "version": "1.2.1",
+    "nsfw": 0,
+    "sources": [
+      {
+        "name": "zero搬运网",
+        "lang": "zh",
+        "id": "8743284448117690086",
+        "baseUrl": "https://www.zerobywzio.com",
+        "nsfw": false
+      }
+    ]
   }
 ]
