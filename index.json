@@ -5549,10 +5549,10 @@
   {
     "name": "Tachiyomi: مانجا العرب",
     "pkg": "eu.kanade.tachiyomi.extension.ar.mangaalarab",
-    "apk": "tachiyomi-ar.mangaalarab-v1.2.3.apk",
+    "apk": "tachiyomi-ar.mangaalarab-v1.2.4.apk",
     "lang": "ar",
-    "code": 3,
-    "version": "1.2.3",
+    "code": 4,
+    "version": "1.2.4",
     "nsfw": 0,
     "sources": [
       {
@@ -9609,10 +9609,10 @@
   {
     "name": "Tachiyomi: MangaOwl",
     "pkg": "eu.kanade.tachiyomi.extension.en.mangaowl",
-    "apk": "tachiyomi-en.mangaowl-v1.2.21.apk",
+    "apk": "tachiyomi-en.mangaowl-v1.2.22.apk",
     "lang": "en",
-    "code": 21,
-    "version": "1.2.21",
+    "code": 22,
+    "version": "1.2.22",
     "nsfw": 0,
     "sources": [
       {
@@ -9645,10 +9645,10 @@
   {
     "name": "Tachiyomi: MangaPill",
     "pkg": "eu.kanade.tachiyomi.extension.en.mangapill",
-    "apk": "tachiyomi-en.mangapill-v1.2.4.apk",
+    "apk": "tachiyomi-en.mangapill-v1.2.5.apk",
     "lang": "en",
-    "code": 4,
-    "version": "1.2.4",
+    "code": 5,
+    "version": "1.2.5",
     "nsfw": 0,
     "sources": [
       {
@@ -16757,14 +16757,14 @@
         "name": "ManaToki",
         "lang": "ko",
         "id": "2526381983439079467",
-        "baseUrl": "https://manatoki124.net",
+        "baseUrl": "https://manatoki125.net",
         "nsfw": false
       },
       {
         "name": "NewToki",
         "lang": "ko",
         "id": "1977818283770282459",
-        "baseUrl": "https://newtoki124.com",
+        "baseUrl": "https://newtoki125.com",
         "nsfw": false
       }
     ]
@@ -19839,10 +19839,10 @@
   {
     "name": "Tachiyomi: Kuaikanmanhua",
     "pkg": "eu.kanade.tachiyomi.extension.zh.kuaikanmanhua",
-    "apk": "tachiyomi-zh.kuaikanmanhua-v1.2.4.apk",
+    "apk": "tachiyomi-zh.kuaikanmanhua-v1.2.5.apk",
     "lang": "zh",
-    "code": 4,
-    "version": "1.2.4",
+    "code": 5,
+    "version": "1.2.5",
     "nsfw": 0,
     "sources": [
       {
@@ -20019,10 +20019,10 @@
   {
     "name": "Tachiyomi: Tencent Comics (ac.qq.com)",
     "pkg": "eu.kanade.tachiyomi.extension.zh.tencentcomics",
-    "apk": "tachiyomi-zh.tencentcomics-v1.2.1.apk",
+    "apk": "tachiyomi-zh.tencentcomics-v1.2.2.apk",
     "lang": "zh",
-    "code": 1,
-    "version": "1.2.1",
+    "code": 2,
+    "version": "1.2.2",
     "nsfw": 0,
     "sources": [
       {
