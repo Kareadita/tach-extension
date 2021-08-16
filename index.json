@@ -16366,10 +16366,10 @@
   {
     "name": "Tachiyomi: Comic Gardo",
     "pkg": "eu.kanade.tachiyomi.extension.ja.comicgardo",
-    "apk": "tachiyomi-ja.comicgardo-v1.2.2.apk",
+    "apk": "tachiyomi-ja.comicgardo-v1.2.3.apk",
     "lang": "ja",
-    "code": 2,
-    "version": "1.2.2",
+    "code": 3,
+    "version": "1.2.3",
     "nsfw": 0,
     "sources": [
       {
@@ -16402,10 +16402,10 @@
   {
     "name": "Tachiyomi: Kurage Bunch",
     "pkg": "eu.kanade.tachiyomi.extension.ja.kuragebunch",
-    "apk": "tachiyomi-ja.kuragebunch-v1.2.2.apk",
+    "apk": "tachiyomi-ja.kuragebunch-v1.2.3.apk",
     "lang": "ja",
-    "code": 2,
-    "version": "1.2.2",
+    "code": 3,
+    "version": "1.2.3",
     "nsfw": 0,
     "sources": [
       {
@@ -16420,10 +16420,10 @@
   {
     "name": "Tachiyomi: Magazine Pocket",
     "pkg": "eu.kanade.tachiyomi.extension.ja.magazinepocket",
-    "apk": "tachiyomi-ja.magazinepocket-v1.2.2.apk",
+    "apk": "tachiyomi-ja.magazinepocket-v1.2.3.apk",
     "lang": "ja",
-    "code": 2,
-    "version": "1.2.2",
+    "code": 3,
+    "version": "1.2.3",
     "nsfw": 0,
     "sources": [
       {
@@ -16438,10 +16438,10 @@
   {
     "name": "Tachiyomi: MAGCOMI",
     "pkg": "eu.kanade.tachiyomi.extension.ja.magcomi",
-    "apk": "tachiyomi-ja.magcomi-v1.2.2.apk",
+    "apk": "tachiyomi-ja.magcomi-v1.2.3.apk",
     "lang": "ja",
-    "code": 2,
-    "version": "1.2.2",
+    "code": 3,
+    "version": "1.2.3",
     "nsfw": 0,
     "sources": [
       {
@@ -16607,10 +16607,10 @@
   {
     "name": "Tachiyomi: Shonen Jump+",
     "pkg": "eu.kanade.tachiyomi.extension.ja.shonenjumpplus",
-    "apk": "tachiyomi-ja.shonenjumpplus-v1.2.4.apk",
+    "apk": "tachiyomi-ja.shonenjumpplus-v1.2.5.apk",
     "lang": "ja",
-    "code": 4,
-    "version": "1.2.4",
+    "code": 5,
+    "version": "1.2.5",
     "nsfw": 0,
     "sources": [
       {
@@ -16625,10 +16625,10 @@
   {
     "name": "Tachiyomi: Tonari no Young Jump",
     "pkg": "eu.kanade.tachiyomi.extension.ja.tonarinoyoungjump",
-    "apk": "tachiyomi-ja.tonarinoyoungjump-v1.2.2.apk",
+    "apk": "tachiyomi-ja.tonarinoyoungjump-v1.2.3.apk",
     "lang": "ja",
-    "code": 2,
-    "version": "1.2.2",
+    "code": 3,
+    "version": "1.2.3",
     "nsfw": 0,
     "sources": [
       {
@@ -16880,10 +16880,10 @@
   {
     "name": "Tachiyomi: Arthur Scan",
     "pkg": "eu.kanade.tachiyomi.extension.pt.arthurscan",
-    "apk": "tachiyomi-pt.arthurscan-v1.2.11.apk",
+    "apk": "tachiyomi-pt.arthurscan-v1.2.12.apk",
     "lang": "pt-BR",
-    "code": 11,
-    "version": "1.2.11",
+    "code": 12,
+    "version": "1.2.12",
     "nsfw": 0,
     "sources": [
       {
@@ -17546,10 +17546,10 @@
   {
     "name": "Tachiyomi: MangaYabu!",
     "pkg": "eu.kanade.tachiyomi.extension.pt.mangayabu",
-    "apk": "tachiyomi-pt.mangayabu-v1.2.11.apk",
+    "apk": "tachiyomi-pt.mangayabu-v1.2.12.apk",
     "lang": "pt-BR",
-    "code": 11,
-    "version": "1.2.11",
+    "code": 12,
+    "version": "1.2.12",
     "nsfw": 0,
     "sources": [
       {
