@@ -16790,17 +16790,17 @@
   {
     "name": "Tachiyomi: Toonkor",
     "pkg": "eu.kanade.tachiyomi.extension.ko.toonkor",
-    "apk": "tachiyomi-ko.toonkor-v1.2.3.apk",
+    "apk": "tachiyomi-ko.toonkor-v1.2.4.apk",
     "lang": "ko",
-    "code": 3,
-    "version": "1.2.3",
+    "code": 4,
+    "version": "1.2.4",
     "nsfw": 0,
     "sources": [
       {
         "name": "Toonkor",
         "lang": "ko",
         "id": "6596496791271983268",
-        "baseUrl": "https://tkor.cx",
+        "baseUrl": "https://tkor.dog",
         "nsfw": false
       }
     ]
