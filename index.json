@@ -8871,10 +8871,10 @@
   {
     "name": "Tachiyomi: MangaFast",
     "pkg": "eu.kanade.tachiyomi.extension.en.mangafast",
-    "apk": "tachiyomi-en.mangafast-v1.2.12.apk",
+    "apk": "tachiyomi-en.mangafast-v1.2.13.apk",
     "lang": "en",
-    "code": 12,
-    "version": "1.2.12",
+    "code": 13,
+    "version": "1.2.13",
     "nsfw": 0,
     "sources": [
       {
@@ -16968,6 +16968,24 @@
     ]
   },
   {
+    "name": "Tachiyomi: Anime Center Scan",
+    "pkg": "eu.kanade.tachiyomi.extension.pt.animecenterscan",
+    "apk": "tachiyomi-pt.animecenterscan-v1.2.9.apk",
+    "lang": "pt-BR",
+    "code": 9,
+    "version": "1.2.9",
+    "nsfw": 1,
+    "sources": [
+      {
+        "name": "Anime Center Scan",
+        "lang": "pt-BR",
+        "id": "6231856208896669443",
+        "baseUrl": "https://animecenterscan.com",
+        "nsfw": true
+      }
+    ]
+  },
+  {
     "name": "Tachiyomi: Argos Scan",
     "pkg": "eu.kanade.tachiyomi.extension.pt.argosscan",
     "apk": "tachiyomi-pt.argosscan-v1.2.12.apk",
@@ -17490,6 +17508,24 @@
     ]
   },
   {
+    "name": "Tachiyomi: Imagine Scan",
+    "pkg": "eu.kanade.tachiyomi.extension.pt.imaginescan",
+    "apk": "tachiyomi-pt.imaginescan-v1.2.10.apk",
+    "lang": "pt-BR",
+    "code": 10,
+    "version": "1.2.10",
+    "nsfw": 1,
+    "sources": [
+      {
+        "name": "Imagine Scan",
+        "lang": "pt-BR",
+        "id": "3354605852773095004",
+        "baseUrl": "https://imaginescan.com.br",
+        "nsfw": true
+      }
+    ]
+  },
+  {
     "name": "Tachiyomi: Império dos Otakus",
     "pkg": "eu.kanade.tachiyomi.extension.pt.imperiodosotakus",
     "apk": "tachiyomi-pt.imperiodosotakus-v1.2.11.apk",
@@ -17521,6 +17557,24 @@
         "lang": "pt-BR",
         "id": "1369117541868504584",
         "baseUrl": "https://imperioscans.com.br",
+        "nsfw": false
+      }
+    ]
+  },
+  {
+    "name": "Tachiyomi: Kami Sama Explorer",
+    "pkg": "eu.kanade.tachiyomi.extension.pt.kamisamaexplorer",
+    "apk": "tachiyomi-pt.kamisamaexplorer-v1.2.9.apk",
+    "lang": "pt-BR",
+    "code": 9,
+    "version": "1.2.9",
+    "nsfw": 0,
+    "sources": [
+      {
+        "name": "Kami Sama Explorer",
+        "lang": "pt-BR",
+        "id": "5221484950287110636",
+        "baseUrl": "https://kamisama.com.br",
         "nsfw": false
       }
     ]
@@ -17762,10 +17816,10 @@
   {
     "name": "Tachiyomi: Muito Mangá",
     "pkg": "eu.kanade.tachiyomi.extension.pt.muitomanga",
-    "apk": "tachiyomi-pt.muitomanga-v1.2.3.apk",
+    "apk": "tachiyomi-pt.muitomanga-v1.2.4.apk",
     "lang": "pt-BR",
-    "code": 3,
-    "version": "1.2.3",
+    "code": 4,
+    "version": "1.2.4",
     "nsfw": 1,
     "sources": [
       {
