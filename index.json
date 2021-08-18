@@ -2,10 +2,10 @@
   {
     "name": "Tachiyomi: Bato.to",
     "pkg": "eu.kanade.tachiyomi.extension.all.batoto",
-    "apk": "tachiyomi-all.batoto-v1.2.13.apk",
+    "apk": "tachiyomi-all.batoto-v1.2.14.apk",
     "lang": "all",
-    "code": 13,
-    "version": "1.2.13",
+    "code": 14,
+    "version": "1.2.14",
     "nsfw": 1,
     "sources": [
       {
@@ -4118,10 +4118,10 @@
   {
     "name": "Tachiyomi: MyReadingManga",
     "pkg": "eu.kanade.tachiyomi.extension.all.myreadingmanga",
-    "apk": "tachiyomi-all.myreadingmanga-v1.2.41.apk",
+    "apk": "tachiyomi-all.myreadingmanga-v1.2.42.apk",
     "lang": "all",
-    "code": 41,
-    "version": "1.2.41",
+    "code": 42,
+    "version": "1.2.42",
     "nsfw": 1,
     "sources": [
       {
@@ -7767,6 +7767,24 @@
         "id": "5904527501696587341",
         "baseUrl": "https://imperfectcomic.com",
         "nsfw": false
+      }
+    ]
+  },
+  {
+    "name": "Tachiyomi: INKR",
+    "pkg": "eu.kanade.tachiyomi.extension.en.inkr",
+    "apk": "tachiyomi-en.inkr-v1.2.3.apk",
+    "lang": "en",
+    "code": 3,
+    "version": "1.2.3",
+    "nsfw": 1,
+    "sources": [
+      {
+        "name": "INKR",
+        "lang": "en",
+        "id": "6949560025265725268",
+        "baseUrl": "https://inkr.com",
+        "nsfw": true
       }
     ]
   },
@@ -17420,10 +17438,10 @@
   {
     "name": "Tachiyomi: Leitor.net",
     "pkg": "eu.kanade.tachiyomi.extension.pt.leitornet",
-    "apk": "tachiyomi-pt.leitornet-v1.2.8.apk",
+    "apk": "tachiyomi-pt.leitornet-v1.2.9.apk",
     "lang": "pt-BR",
-    "code": 8,
-    "version": "1.2.8",
+    "code": 9,
+    "version": "1.2.9",
     "nsfw": 1,
     "sources": [
       {
@@ -17492,10 +17510,10 @@
   {
     "name": "Tachiyomi: Mangá Livre",
     "pkg": "eu.kanade.tachiyomi.extension.pt.mangalivre",
-    "apk": "tachiyomi-pt.mangalivre-v1.2.8.apk",
+    "apk": "tachiyomi-pt.mangalivre-v1.2.9.apk",
     "lang": "pt-BR",
-    "code": 8,
-    "version": "1.2.8",
+    "code": 9,
+    "version": "1.2.9",
     "nsfw": 1,
     "sources": [
       {
@@ -18066,24 +18084,6 @@
     ]
   },
   {
-    "name": "Tachiyomi: Tsuki Mangás",
-    "pkg": "eu.kanade.tachiyomi.extension.pt.tsukimangas",
-    "apk": "tachiyomi-pt.tsukimangas-v1.2.27.apk",
-    "lang": "pt-BR",
-    "code": 27,
-    "version": "1.2.27",
-    "nsfw": 1,
-    "sources": [
-      {
-        "name": "Tsuki Mangás",
-        "lang": "pt-BR",
-        "id": "4385830901435613463",
-        "baseUrl": "https://tsukimangas.com",
-        "nsfw": true
-      }
-    ]
-  },
-  {
     "name": "Tachiyomi: Tsundoku Traduções",
     "pkg": "eu.kanade.tachiyomi.extension.pt.tsundokutraducoes",
     "apk": "tachiyomi-pt.tsundokutraducoes-v1.2.12.apk",
@@ -18338,17 +18338,17 @@
   {
     "name": "Tachiyomi: Henchan",
     "pkg": "eu.kanade.tachiyomi.extension.ru.henchan",
-    "apk": "tachiyomi-ru.henchan-v1.2.25.apk",
+    "apk": "tachiyomi-ru.henchan-v1.2.26.apk",
     "lang": "ru",
-    "code": 25,
-    "version": "1.2.25",
+    "code": 26,
+    "version": "1.2.26",
     "nsfw": 1,
     "sources": [
       {
         "name": "Henchan",
         "lang": "ru",
         "id": "5504588601186153612",
-        "baseUrl": "https://hchan.me",
+        "baseUrl": "https://hentaichan.live",
         "nsfw": true
       }
     ]
