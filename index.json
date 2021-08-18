@@ -16088,7 +16088,7 @@
         "name": "Sekaikomik",
         "lang": "id",
         "id": "4017490974617506790",
-        "baseUrl": "https://www.sekaikomik.xyz",
+        "baseUrl": "https://www.sekaikomik.in",
         "nsfw": true
       }
     ]
@@ -17528,10 +17528,10 @@
   {
     "name": "Tachiyomi: Leitor.net",
     "pkg": "eu.kanade.tachiyomi.extension.pt.leitornet",
-    "apk": "tachiyomi-pt.leitornet-v1.2.9.apk",
+    "apk": "tachiyomi-pt.leitornet-v1.2.10.apk",
     "lang": "pt-BR",
-    "code": 9,
-    "version": "1.2.9",
+    "code": 10,
+    "version": "1.2.10",
     "nsfw": 1,
     "sources": [
       {
@@ -17600,10 +17600,10 @@
   {
     "name": "Tachiyomi: Mangá Livre",
     "pkg": "eu.kanade.tachiyomi.extension.pt.mangalivre",
-    "apk": "tachiyomi-pt.mangalivre-v1.2.9.apk",
+    "apk": "tachiyomi-pt.mangalivre-v1.2.10.apk",
     "lang": "pt-BR",
-    "code": 9,
-    "version": "1.2.9",
+    "code": 10,
+    "version": "1.2.10",
     "nsfw": 1,
     "sources": [
       {
