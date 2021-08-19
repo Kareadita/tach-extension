@@ -7809,10 +7809,10 @@
   {
     "name": "Tachiyomi: IsekaiScan.com",
     "pkg": "eu.kanade.tachiyomi.extension.en.isekaiscancom",
-    "apk": "tachiyomi-en.isekaiscancom-v1.2.12.apk",
+    "apk": "tachiyomi-en.isekaiscancom-v1.2.13.apk",
     "lang": "en",
-    "code": 12,
-    "version": "1.2.12",
+    "code": 13,
+    "version": "1.2.13",
     "nsfw": 0,
     "sources": [
       {
@@ -8324,6 +8324,24 @@
         "lang": "en",
         "id": "4526574840213847044",
         "baseUrl": "https://lordmanga.com",
+        "nsfw": false
+      }
+    ]
+  },
+  {
+    "name": "Tachiyomi: Lumine Scans",
+    "pkg": "eu.kanade.tachiyomi.extension.en.luminescans",
+    "apk": "tachiyomi-en.luminescans-v1.2.9.apk",
+    "lang": "en",
+    "code": 9,
+    "version": "1.2.9",
+    "nsfw": 0,
+    "sources": [
+      {
+        "name": "Lumine Scans",
+        "lang": "en",
+        "id": "8362190032444848573",
+        "baseUrl": "https://luminescans.xyz/",
         "nsfw": false
       }
     ]
@@ -13173,10 +13191,10 @@
   {
     "name": "Tachiyomi: Sunshine Butterfly Scans",
     "pkg": "eu.kanade.tachiyomi.extension.en.sunshinebutterflyscans",
-    "apk": "tachiyomi-en.sunshinebutterflyscans-v1.2.9.apk",
+    "apk": "tachiyomi-en.sunshinebutterflyscans-v1.2.10.apk",
     "lang": "en",
-    "code": 9,
-    "version": "1.2.9",
+    "code": 10,
+    "version": "1.2.10",
     "nsfw": 1,
     "sources": [
       {
