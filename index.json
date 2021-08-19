@@ -5369,10 +5369,10 @@
   {
     "name": "Tachiyomi: Asgard Team",
     "pkg": "eu.kanade.tachiyomi.extension.ar.asgardteam",
-    "apk": "tachiyomi-ar.asgardteam-v1.2.10.apk",
+    "apk": "tachiyomi-ar.asgardteam-v1.2.11.apk",
     "lang": "ar",
-    "code": 10,
-    "version": "1.2.10",
+    "code": 11,
+    "version": "1.2.11",
     "nsfw": 0,
     "sources": [
       {
@@ -16078,10 +16078,10 @@
   {
     "name": "Tachiyomi: Sekaikomik",
     "pkg": "eu.kanade.tachiyomi.extension.id.sekaikomik",
-    "apk": "tachiyomi-id.sekaikomik-v1.2.15.apk",
+    "apk": "tachiyomi-id.sekaikomik-v1.2.16.apk",
     "lang": "id",
-    "code": 15,
-    "version": "1.2.15",
+    "code": 16,
+    "version": "1.2.16",
     "nsfw": 1,
     "sources": [
       {
@@ -16366,10 +16366,10 @@
   {
     "name": "Tachiyomi: Phoenix Scans",
     "pkg": "eu.kanade.tachiyomi.extension.it.phoenixscans",
-    "apk": "tachiyomi-it.phoenixscans-v1.2.4.apk",
+    "apk": "tachiyomi-it.phoenixscans-v1.2.5.apk",
     "lang": "it",
-    "code": 4,
-    "version": "1.2.4",
+    "code": 5,
+    "version": "1.2.5",
     "nsfw": 0,
     "sources": [
       {
@@ -18242,6 +18242,24 @@
         "id": "3941383635597527601",
         "baseUrl": "https://tsundokutraducoes.com.br",
         "nsfw": false
+      }
+    ]
+  },
+  {
+    "name": "Tachiyomi: Universo Hentai",
+    "pkg": "eu.kanade.tachiyomi.extension.pt.universohentai",
+    "apk": "tachiyomi-pt.universohentai-v1.2.1.apk",
+    "lang": "pt-BR",
+    "code": 1,
+    "version": "1.2.1",
+    "nsfw": 1,
+    "sources": [
+      {
+        "name": "Universo Hentai",
+        "lang": "pt-BR",
+        "id": "4207492914234184899",
+        "baseUrl": "https://universohentai.com",
+        "nsfw": true
       }
     ]
   },
