@@ -5639,10 +5639,10 @@
   {
     "name": "Tachiyomi: MangaLink",
     "pkg": "eu.kanade.tachiyomi.extension.ar.mangalink",
-    "apk": "tachiyomi-ar.mangalink-v1.2.2.apk",
+    "apk": "tachiyomi-ar.mangalink-v1.2.3.apk",
     "lang": "ar",
-    "code": 2,
-    "version": "1.2.2",
+    "code": 3,
+    "version": "1.2.3",
     "nsfw": 0,
     "sources": [
       {
@@ -6791,10 +6791,10 @@
   {
     "name": "Tachiyomi: Dynasty",
     "pkg": "eu.kanade.tachiyomi.extension.en.dynasty",
-    "apk": "tachiyomi-en.dynasty-v1.2.14.apk",
+    "apk": "tachiyomi-en.dynasty-v1.2.15.apk",
     "lang": "en",
-    "code": 14,
-    "version": "1.2.14",
+    "code": 15,
+    "version": "1.2.15",
     "nsfw": 0,
     "sources": [
       {
@@ -13263,10 +13263,10 @@
   {
     "name": "Tachiyomi: Tapas",
     "pkg": "eu.kanade.tachiyomi.extension.en.tapastic",
-    "apk": "tachiyomi-en.tapastic-v1.2.11.apk",
+    "apk": "tachiyomi-en.tapastic-v1.2.12.apk",
     "lang": "en",
-    "code": 11,
-    "version": "1.2.11",
+    "code": 12,
+    "version": "1.2.12",
     "nsfw": 0,
     "sources": [
       {
