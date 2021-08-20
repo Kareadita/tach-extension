@@ -5603,10 +5603,10 @@
   {
     "name": "Tachiyomi: Manga Land Arabic",
     "pkg": "eu.kanade.tachiyomi.extension.ar.mangalandarabic",
-    "apk": "tachiyomi-ar.mangalandarabic-v1.2.10.apk",
+    "apk": "tachiyomi-ar.mangalandarabic-v1.2.11.apk",
     "lang": "ar",
-    "code": 10,
-    "version": "1.2.10",
+    "code": 11,
+    "version": "1.2.11",
     "nsfw": 0,
     "sources": [
       {
@@ -6215,10 +6215,10 @@
   {
     "name": "Tachiyomi: Asura Raw",
     "pkg": "eu.kanade.tachiyomi.extension.en.asuraraw",
-    "apk": "tachiyomi-en.asuraraw-v1.2.9.apk",
+    "apk": "tachiyomi-en.asuraraw-v1.2.10.apk",
     "lang": "en",
-    "code": 9,
-    "version": "1.2.9",
+    "code": 10,
+    "version": "1.2.10",
     "nsfw": 0,
     "sources": [
       {
@@ -7737,10 +7737,10 @@
   {
     "name": "Tachiyomi: Immortal Updates",
     "pkg": "eu.kanade.tachiyomi.extension.en.immortalupdates",
-    "apk": "tachiyomi-en.immortalupdates-v1.2.10.apk",
+    "apk": "tachiyomi-en.immortalupdates-v1.2.11.apk",
     "lang": "en",
-    "code": 10,
-    "version": "1.2.10",
+    "code": 11,
+    "version": "1.2.11",
     "nsfw": 0,
     "sources": [
       {
@@ -9105,10 +9105,10 @@
   {
     "name": "Tachiyomi: Mangahere",
     "pkg": "eu.kanade.tachiyomi.extension.en.mangahere",
-    "apk": "tachiyomi-en.mangahere-v1.2.16.apk",
+    "apk": "tachiyomi-en.mangahere-v1.2.17.apk",
     "lang": "en",
-    "code": 16,
-    "version": "1.2.16",
+    "code": 17,
+    "version": "1.2.17",
     "nsfw": 0,
     "sources": [
       {
@@ -10471,6 +10471,24 @@
     ]
   },
   {
+    "name": "Tachiyomi: ManhuaComic",
+    "pkg": "eu.kanade.tachiyomi.extension.en.manhuacomic",
+    "apk": "tachiyomi-en.manhuacomic-v1.2.9.apk",
+    "lang": "en",
+    "code": 9,
+    "version": "1.2.9",
+    "nsfw": 0,
+    "sources": [
+      {
+        "name": "ManhuaComic",
+        "lang": "en",
+        "id": "1027217354715464407",
+        "baseUrl": "https://manhuacomic.com",
+        "nsfw": false
+      }
+    ]
+  },
+  {
     "name": "Tachiyomi: ManhuaDex",
     "pkg": "eu.kanade.tachiyomi.extension.en.manhuadex",
     "apk": "tachiyomi-en.manhuadex-v1.2.10.apk",
@@ -10905,10 +10923,10 @@
   {
     "name": "Tachiyomi: Manhwahentai.me",
     "pkg": "eu.kanade.tachiyomi.extension.en.manhwahentaime",
-    "apk": "tachiyomi-en.manhwahentaime-v1.2.10.apk",
+    "apk": "tachiyomi-en.manhwahentaime-v1.2.11.apk",
     "lang": "en",
-    "code": 10,
-    "version": "1.2.10",
+    "code": 11,
+    "version": "1.2.11",
     "nsfw": 1,
     "sources": [
       {
@@ -11121,10 +11139,10 @@
   {
     "name": "Tachiyomi: ManyToon",
     "pkg": "eu.kanade.tachiyomi.extension.en.manytoon",
-    "apk": "tachiyomi-en.manytoon-v1.2.12.apk",
+    "apk": "tachiyomi-en.manytoon-v1.2.13.apk",
     "lang": "en",
-    "code": 12,
-    "version": "1.2.12",
+    "code": 13,
+    "version": "1.2.13",
     "nsfw": 1,
     "sources": [
       {
@@ -11139,10 +11157,10 @@
   {
     "name": "Tachiyomi: ManyToon.me",
     "pkg": "eu.kanade.tachiyomi.extension.en.manytoonme",
-    "apk": "tachiyomi-en.manytoonme-v1.2.11.apk",
+    "apk": "tachiyomi-en.manytoonme-v1.2.12.apk",
     "lang": "en",
-    "code": 11,
-    "version": "1.2.11",
+    "code": 12,
+    "version": "1.2.12",
     "nsfw": 1,
     "sources": [
       {
@@ -12739,6 +12757,24 @@
     ]
   },
   {
+    "name": "Tachiyomi: Real Life Comics",
+    "pkg": "eu.kanade.tachiyomi.extension.en.reallifecomics",
+    "apk": "tachiyomi-en.reallifecomics-v1.2.1.apk",
+    "lang": "en",
+    "code": 1,
+    "version": "1.2.1",
+    "nsfw": 0,
+    "sources": [
+      {
+        "name": "Real Life Comics",
+        "lang": "en",
+        "id": "4890735226828164084",
+        "baseUrl": "https://reallifecomics.com",
+        "nsfw": false
+      }
+    ]
+  },
+  {
     "name": "Tachiyomi: Reaper Scans",
     "pkg": "eu.kanade.tachiyomi.extension.en.reaperscans",
     "apk": "tachiyomi-en.reaperscans-v1.2.9.apk",
@@ -12849,10 +12885,10 @@
   {
     "name": "Tachiyomi: Scans Raw",
     "pkg": "eu.kanade.tachiyomi.extension.en.scansraw",
-    "apk": "tachiyomi-en.scansraw-v1.2.9.apk",
+    "apk": "tachiyomi-en.scansraw-v1.2.10.apk",
     "lang": "en",
-    "code": 9,
-    "version": "1.2.9",
+    "code": 10,
+    "version": "1.2.10",
     "nsfw": 0,
     "sources": [
       {
@@ -16490,6 +16526,24 @@
     ]
   },
   {
+    "name": "Tachiyomi: ZeurelScan",
+    "pkg": "eu.kanade.tachiyomi.extension.it.zeurelscan",
+    "apk": "tachiyomi-it.zeurelscan-v1.2.1.apk",
+    "lang": "it",
+    "code": 1,
+    "version": "1.2.1",
+    "nsfw": 0,
+    "sources": [
+      {
+        "name": "ZeurelScan",
+        "lang": "it",
+        "id": "8830049663587145084",
+        "baseUrl": "https://www.zeurelscan.com",
+        "nsfw": false
+      }
+    ]
+  },
+  {
     "name": "Tachiyomi: Comic Gardo",
     "pkg": "eu.kanade.tachiyomi.extension.ja.comicgardo",
     "apk": "tachiyomi-ja.comicgardo-v1.2.3.apk",
@@ -19202,10 +19256,10 @@
   {
     "name": "Tachiyomi: Manga Diyari",
     "pkg": "eu.kanade.tachiyomi.extension.tr.mangadiyari",
-    "apk": "tachiyomi-tr.mangadiyari-v1.2.10.apk",
+    "apk": "tachiyomi-tr.mangadiyari-v1.2.11.apk",
     "lang": "tr",
-    "code": 10,
-    "version": "1.2.10",
+    "code": 11,
+    "version": "1.2.11",
     "nsfw": 0,
     "sources": [
       {
