@@ -17652,24 +17652,6 @@
     ]
   },
   {
-    "name": "Tachiyomi: Leitor.net",
-    "pkg": "eu.kanade.tachiyomi.extension.pt.leitornet",
-    "apk": "tachiyomi-pt.leitornet-v1.2.10.apk",
-    "lang": "pt-BR",
-    "code": 10,
-    "version": "1.2.10",
-    "nsfw": 1,
-    "sources": [
-      {
-        "name": "Leitor.net",
-        "lang": "pt-BR",
-        "id": "2225174659569980836",
-        "baseUrl": "https://leitor.net",
-        "nsfw": false
-      }
-    ]
-  },
-  {
     "name": "Tachiyomi: Lemon Juice Scan",
     "pkg": "eu.kanade.tachiyomi.extension.pt.lemonjuicescan",
     "apk": "tachiyomi-pt.lemonjuicescan-v1.2.11.apk",
@@ -17719,24 +17701,6 @@
         "lang": "pt-BR",
         "id": "5143081798504933114",
         "baseUrl": "https://littlemonsterscan.com.br",
-        "nsfw": false
-      }
-    ]
-  },
-  {
-    "name": "Tachiyomi: Mangá Livre",
-    "pkg": "eu.kanade.tachiyomi.extension.pt.mangalivre",
-    "apk": "tachiyomi-pt.mangalivre-v1.2.10.apk",
-    "lang": "pt-BR",
-    "code": 10,
-    "version": "1.2.10",
-    "nsfw": 1,
-    "sources": [
-      {
-        "name": "Mangá Livre",
-        "lang": "pt-BR",
-        "id": "4762777556012432014",
-        "baseUrl": "https://mangalivre.net",
         "nsfw": false
       }
     ]
