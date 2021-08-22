@@ -2384,10 +2384,10 @@
   {
     "name": "Tachiyomi: IMHentai",
     "pkg": "eu.kanade.tachiyomi.extension.all.imhentai",
-    "apk": "tachiyomi-all.imhentai-v1.2.2.apk",
+    "apk": "tachiyomi-all.imhentai-v1.2.3.apk",
     "lang": "all",
-    "code": 2,
-    "version": "1.2.2",
+    "code": 3,
+    "version": "1.2.3",
     "nsfw": 1,
     "sources": [
       {
@@ -4893,10 +4893,10 @@
   {
     "name": "Tachiyomi: Tachidesk",
     "pkg": "eu.kanade.tachiyomi.extension.all.tachidesk",
-    "apk": "tachiyomi-all.tachidesk-v1.2.1.apk",
+    "apk": "tachiyomi-all.tachidesk-v1.2.2.apk",
     "lang": "en",
-    "code": 1,
-    "version": "1.2.1",
+    "code": 2,
+    "version": "1.2.2",
     "nsfw": 1,
     "sources": [
       {
@@ -8329,6 +8329,24 @@
     ]
   },
   {
+    "name": "Tachiyomi: Loading Artist",
+    "pkg": "eu.kanade.tachiyomi.extension.en.loadingartist",
+    "apk": "tachiyomi-en.loadingartist-v1.2.1.apk",
+    "lang": "en",
+    "code": 1,
+    "version": "1.2.1",
+    "nsfw": 0,
+    "sources": [
+      {
+        "name": "Loading Artist",
+        "lang": "en",
+        "id": "1555415289901855998",
+        "baseUrl": "https://loadingartist.com",
+        "nsfw": false
+      }
+    ]
+  },
+  {
     "name": "Tachiyomi: Lolicon",
     "pkg": "eu.kanade.tachiyomi.extension.en.lolicon",
     "apk": "tachiyomi-en.lolicon-v1.2.13.apk",
@@ -9267,10 +9285,10 @@
   {
     "name": "Tachiyomi: MangaJar",
     "pkg": "eu.kanade.tachiyomi.extension.en.mangajar",
-    "apk": "tachiyomi-en.mangajar-v1.2.5.apk",
+    "apk": "tachiyomi-en.mangajar-v1.2.6.apk",
     "lang": "en",
-    "code": 5,
-    "version": "1.2.5",
+    "code": 6,
+    "version": "1.2.6",
     "nsfw": 0,
     "sources": [
       {
@@ -17009,14 +17027,14 @@
         "name": "ManaToki",
         "lang": "ko",
         "id": "2526381983439079467",
-        "baseUrl": "https://manatoki125.net",
+        "baseUrl": "https://manatoki126.net",
         "nsfw": false
       },
       {
         "name": "NewToki",
         "lang": "ko",
         "id": "1977818283770282459",
-        "baseUrl": "https://newtoki125.com",
+        "baseUrl": "https://newtoki126.com",
         "nsfw": false
       }
     ]
@@ -17958,24 +17976,6 @@
     ]
   },
   {
-    "name": "Tachiyomi: Mundo Mangá-Kun",
-    "pkg": "eu.kanade.tachiyomi.extension.pt.mundomangakun",
-    "apk": "tachiyomi-pt.mundomangakun-v1.2.5.apk",
-    "lang": "pt-BR",
-    "code": 5,
-    "version": "1.2.5",
-    "nsfw": 1,
-    "sources": [
-      {
-        "name": "Mundo Mangá-Kun",
-        "lang": "pt-BR",
-        "id": "6615057899864522767",
-        "baseUrl": "https://mundomangakun.com.br",
-        "nsfw": true
-      }
-    ]
-  },
-  {
     "name": "Tachiyomi: NekoBreaker Scan",
     "pkg": "eu.kanade.tachiyomi.extension.pt.nekobreakerscan",
     "apk": "tachiyomi-pt.nekobreakerscan-v1.2.12.apk",
@@ -18572,10 +18572,10 @@
   {
     "name": "Tachiyomi: AllHentai",
     "pkg": "eu.kanade.tachiyomi.extension.ru.allhentai",
-    "apk": "tachiyomi-ru.allhentai-v1.2.8.apk",
+    "apk": "tachiyomi-ru.allhentai-v1.2.9.apk",
     "lang": "ru",
-    "code": 8,
-    "version": "1.2.8",
+    "code": 9,
+    "version": "1.2.9",
     "nsfw": 1,
     "sources": [
       {
