@@ -17976,6 +17976,24 @@
     ]
   },
   {
+    "name": "Tachiyomi: Mundo Mangá-Kun",
+    "pkg": "eu.kanade.tachiyomi.extension.pt.mundomangakun",
+    "apk": "tachiyomi-pt.mundomangakun-v1.2.6.apk",
+    "lang": "pt-BR",
+    "code": 6,
+    "version": "1.2.6",
+    "nsfw": 1,
+    "sources": [
+      {
+        "name": "Mundo Mangá-Kun",
+        "lang": "pt-BR",
+        "id": "6615057899864522767",
+        "baseUrl": "https://mundomangakun.com.br",
+        "nsfw": true
+      }
+    ]
+  },
+  {
     "name": "Tachiyomi: NekoBreaker Scan",
     "pkg": "eu.kanade.tachiyomi.extension.pt.nekobreakerscan",
     "apk": "tachiyomi-pt.nekobreakerscan-v1.2.12.apk",
