@@ -4118,10 +4118,10 @@
   {
     "name": "Tachiyomi: MyReadingManga",
     "pkg": "eu.kanade.tachiyomi.extension.all.myreadingmanga",
-    "apk": "tachiyomi-all.myreadingmanga-v1.2.42.apk",
+    "apk": "tachiyomi-all.myreadingmanga-v1.2.43.apk",
     "lang": "all",
-    "code": 42,
-    "version": "1.2.42",
+    "code": 43,
+    "version": "1.2.43",
     "nsfw": 1,
     "sources": [
       {
@@ -6334,6 +6334,24 @@
         "lang": "en",
         "id": "6251873330157357206",
         "baseUrl": "http://127.0.0.1/",
+        "nsfw": false
+      }
+    ]
+  },
+  {
+    "name": "Tachiyomi: BeeManga",
+    "pkg": "eu.kanade.tachiyomi.extension.en.beemanga",
+    "apk": "tachiyomi-en.beemanga-v1.2.2.apk",
+    "lang": "en",
+    "code": 2,
+    "version": "1.2.2",
+    "nsfw": 0,
+    "sources": [
+      {
+        "name": "BeeManga",
+        "lang": "en",
+        "id": "6177262968674109922",
+        "baseUrl": "https://ww1.beemanga.com",
         "nsfw": false
       }
     ]
@@ -16366,17 +16384,17 @@
   {
     "name": "Tachiyomi: GTO The Great Site",
     "pkg": "eu.kanade.tachiyomi.extension.it.gto",
-    "apk": "tachiyomi-it.gto-v1.2.3.apk",
+    "apk": "tachiyomi-it.gto-v1.2.4.apk",
     "lang": "it",
-    "code": 3,
-    "version": "1.2.3",
+    "code": 4,
+    "version": "1.2.4",
     "nsfw": 0,
     "sources": [
       {
         "name": "GTO The Great Site",
         "lang": "it",
-        "id": "1830654940513892447",
-        "baseUrl": "https://www.gtothegreatsite.net",
+        "id": "2773063800266255222",
+        "baseUrl": "https://reader.gtothegreatsite.net",
         "nsfw": false
       }
     ]
@@ -17312,10 +17330,10 @@
   {
     "name": "Tachiyomi: Cervo Scanlator",
     "pkg": "eu.kanade.tachiyomi.extension.pt.cervoscanlator",
-    "apk": "tachiyomi-pt.cervoscanlator-v1.2.14.apk",
+    "apk": "tachiyomi-pt.cervoscanlator-v1.2.15.apk",
     "lang": "pt-BR",
-    "code": 14,
-    "version": "1.2.14",
+    "code": 15,
+    "version": "1.2.15",
     "nsfw": 0,
     "sources": [
       {
@@ -17564,10 +17582,10 @@
   {
     "name": "Tachiyomi: Golden Mangás",
     "pkg": "eu.kanade.tachiyomi.extension.pt.goldenmangas",
-    "apk": "tachiyomi-pt.goldenmangas-v1.2.11.apk",
+    "apk": "tachiyomi-pt.goldenmangas-v1.2.12.apk",
     "lang": "pt-BR",
-    "code": 11,
-    "version": "1.2.11",
+    "code": 12,
+    "version": "1.2.12",
     "nsfw": 0,
     "sources": [
       {
@@ -17828,6 +17846,24 @@
         "id": "8638766250467215060",
         "baseUrl": "https://mangatube.site",
         "nsfw": false
+      }
+    ]
+  },
+  {
+    "name": "Tachiyomi: MangaVibe",
+    "pkg": "eu.kanade.tachiyomi.extension.pt.mangavibe",
+    "apk": "tachiyomi-pt.mangavibe-v1.2.1.apk",
+    "lang": "pt-BR",
+    "code": 1,
+    "version": "1.2.1",
+    "nsfw": 1,
+    "sources": [
+      {
+        "name": "MangaVibe",
+        "lang": "pt-BR",
+        "id": "4752791037024226378",
+        "baseUrl": "https://mangavibe.top",
+        "nsfw": true
       }
     ]
   },
@@ -18806,10 +18842,10 @@
   {
     "name": "Tachiyomi: Mintmanga",
     "pkg": "eu.kanade.tachiyomi.extension.ru.mintmanga",
-    "apk": "tachiyomi-ru.mintmanga-v1.2.31.apk",
+    "apk": "tachiyomi-ru.mintmanga-v1.2.32.apk",
     "lang": "ru",
-    "code": 31,
-    "version": "1.2.31",
+    "code": 32,
+    "version": "1.2.32",
     "nsfw": 0,
     "sources": [
       {
@@ -18842,10 +18878,10 @@
   {
     "name": "Tachiyomi: Readmanga",
     "pkg": "eu.kanade.tachiyomi.extension.ru.readmanga",
-    "apk": "tachiyomi-ru.readmanga-v1.2.30.apk",
+    "apk": "tachiyomi-ru.readmanga-v1.2.31.apk",
     "lang": "ru",
-    "code": 30,
-    "version": "1.2.30",
+    "code": 31,
+    "version": "1.2.31",
     "nsfw": 0,
     "sources": [
       {
@@ -18914,10 +18950,10 @@
   {
     "name": "Tachiyomi: Selfmanga",
     "pkg": "eu.kanade.tachiyomi.extension.ru.selfmanga",
-    "apk": "tachiyomi-ru.selfmanga-v1.2.9.apk",
+    "apk": "tachiyomi-ru.selfmanga-v1.2.10.apk",
     "lang": "ru",
-    "code": 9,
-    "version": "1.2.9",
+    "code": 10,
+    "version": "1.2.10",
     "nsfw": 0,
     "sources": [
       {
