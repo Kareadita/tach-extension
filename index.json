@@ -2494,10 +2494,10 @@
   {
     "name": "Tachiyomi: Leviatan Scans",
     "pkg": "eu.kanade.tachiyomi.extension.all.leviatanscans",
-    "apk": "tachiyomi-all.leviatanscans-v1.2.17.apk",
+    "apk": "tachiyomi-all.leviatanscans-v1.2.18.apk",
     "lang": "all",
-    "code": 17,
-    "version": "1.2.17",
+    "code": 18,
+    "version": "1.2.18",
     "nsfw": 0,
     "sources": [
       {
@@ -2829,10 +2829,10 @@
   {
     "name": "Tachiyomi: MangaDex",
     "pkg": "eu.kanade.tachiyomi.extension.all.mangadex",
-    "apk": "tachiyomi-all.mangadex-v1.2.128.apk",
+    "apk": "tachiyomi-all.mangadex-v1.2.129.apk",
     "lang": "all",
-    "code": 128,
-    "version": "1.2.128",
+    "code": 129,
+    "version": "1.2.129",
     "nsfw": 1,
     "sources": [
       {
@@ -8817,10 +8817,10 @@
   {
     "name": "Tachiyomi: MangaCultivator",
     "pkg": "eu.kanade.tachiyomi.extension.en.mangacultivator",
-    "apk": "tachiyomi-en.mangacultivator-v1.2.12.apk",
+    "apk": "tachiyomi-en.mangacultivator-v1.2.13.apk",
     "lang": "en",
-    "code": 12,
-    "version": "1.2.12",
+    "code": 13,
+    "version": "1.2.13",
     "nsfw": 0,
     "sources": [
       {
@@ -10149,10 +10149,10 @@
   {
     "name": "Tachiyomi: Mangasushi",
     "pkg": "eu.kanade.tachiyomi.extension.en.mangasushi",
-    "apk": "tachiyomi-en.mangasushi-v1.2.12.apk",
+    "apk": "tachiyomi-en.mangasushi-v1.2.13.apk",
     "lang": "en",
-    "code": 12,
-    "version": "1.2.12",
+    "code": 13,
+    "version": "1.2.13",
     "nsfw": 0,
     "sources": [
       {
@@ -11049,10 +11049,10 @@
   {
     "name": "Tachiyomi: ManhwaNelo",
     "pkg": "eu.kanade.tachiyomi.extension.en.manhwanelo",
-    "apk": "tachiyomi-en.manhwanelo-v1.2.12.apk",
+    "apk": "tachiyomi-en.manhwanelo-v1.2.13.apk",
     "lang": "en",
-    "code": 12,
-    "version": "1.2.12",
+    "code": 13,
+    "version": "1.2.13",
     "nsfw": 0,
     "sources": [
       {
@@ -13101,17 +13101,17 @@
   {
     "name": "Tachiyomi: Shooting Star Scans",
     "pkg": "eu.kanade.tachiyomi.extension.en.shootingstarscans",
-    "apk": "tachiyomi-en.shootingstarscans-v1.2.12.apk",
+    "apk": "tachiyomi-en.shootingstarscans-v1.2.13.apk",
     "lang": "en",
-    "code": 12,
-    "version": "1.2.12",
+    "code": 13,
+    "version": "1.2.13",
     "nsfw": 0,
     "sources": [
       {
         "name": "Shooting Star Scans",
         "lang": "en",
         "id": "7432213955030892585",
-        "baseUrl": "https://shootingstarscans.xyz",
+        "baseUrl": "https://shootingstarscans.com",
         "nsfw": false
       }
     ]
@@ -15322,10 +15322,10 @@
   {
     "name": "Tachiyomi: Manga-Scantrad",
     "pkg": "eu.kanade.tachiyomi.extension.fr.mangascantrad",
-    "apk": "tachiyomi-fr.mangascantrad-v1.2.12.apk",
+    "apk": "tachiyomi-fr.mangascantrad-v1.2.13.apk",
     "lang": "fr",
-    "code": 12,
-    "version": "1.2.12",
+    "code": 13,
+    "version": "1.2.13",
     "nsfw": 0,
     "sources": [
       {
