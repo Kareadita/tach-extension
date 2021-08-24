@@ -2829,10 +2829,10 @@
   {
     "name": "Tachiyomi: MangaDex",
     "pkg": "eu.kanade.tachiyomi.extension.all.mangadex",
-    "apk": "tachiyomi-all.mangadex-v1.2.127.apk",
+    "apk": "tachiyomi-all.mangadex-v1.2.128.apk",
     "lang": "all",
-    "code": 127,
-    "version": "1.2.127",
+    "code": 128,
+    "version": "1.2.128",
     "nsfw": 1,
     "sources": [
       {
@@ -5567,10 +5567,10 @@
   {
     "name": "Tachiyomi: مانجا العرب",
     "pkg": "eu.kanade.tachiyomi.extension.ar.mangaalarab",
-    "apk": "tachiyomi-ar.mangaalarab-v1.2.4.apk",
+    "apk": "tachiyomi-ar.mangaalarab-v1.2.5.apk",
     "lang": "ar",
-    "code": 4,
-    "version": "1.2.4",
+    "code": 5,
+    "version": "1.2.5",
     "nsfw": 0,
     "sources": [
       {
@@ -5657,10 +5657,10 @@
   {
     "name": "Tachiyomi: MangaLink",
     "pkg": "eu.kanade.tachiyomi.extension.ar.mangalink",
-    "apk": "tachiyomi-ar.mangalink-v1.2.3.apk",
+    "apk": "tachiyomi-ar.mangalink-v1.2.4.apk",
     "lang": "ar",
-    "code": 3,
-    "version": "1.2.3",
+    "code": 4,
+    "version": "1.2.4",
     "nsfw": 0,
     "sources": [
       {
@@ -8349,10 +8349,10 @@
   {
     "name": "Tachiyomi: Loading Artist",
     "pkg": "eu.kanade.tachiyomi.extension.en.loadingartist",
-    "apk": "tachiyomi-en.loadingartist-v1.2.1.apk",
+    "apk": "tachiyomi-en.loadingartist-v1.2.2.apk",
     "lang": "en",
-    "code": 1,
-    "version": "1.2.1",
+    "code": 2,
+    "version": "1.2.2",
     "nsfw": 0,
     "sources": [
       {
@@ -15896,6 +15896,24 @@
     ]
   },
   {
+    "name": "Tachiyomi: KomikPlay",
+    "pkg": "eu.kanade.tachiyomi.extension.id.komikplay",
+    "apk": "tachiyomi-id.komikplay-v1.2.1.apk",
+    "lang": "id",
+    "code": 1,
+    "version": "1.2.1",
+    "nsfw": 0,
+    "sources": [
+      {
+        "name": "KomikPlay",
+        "lang": "id",
+        "id": "48342143346368900",
+        "baseUrl": "https://komikplay.com",
+        "nsfw": false
+      }
+    ]
+  },
+  {
     "name": "Tachiyomi: Komik Station",
     "pkg": "eu.kanade.tachiyomi.extension.id.komikstation",
     "apk": "tachiyomi-id.komikstation-v1.2.13.apk",
@@ -15934,10 +15952,10 @@
   {
     "name": "Tachiyomi: Maid - Manga",
     "pkg": "eu.kanade.tachiyomi.extension.id.maidmanga",
-    "apk": "tachiyomi-id.maidmanga-v1.2.9.apk",
+    "apk": "tachiyomi-id.maidmanga-v1.2.10.apk",
     "lang": "id",
-    "code": 9,
-    "version": "1.2.9",
+    "code": 10,
+    "version": "1.2.10",
     "nsfw": 0,
     "sources": [
       {
@@ -15999,24 +16017,6 @@
         "lang": "id",
         "id": "7542243559902212558",
         "baseUrl": "https://mangaindonesia.net",
-        "nsfw": false
-      }
-    ]
-  },
-  {
-    "name": "Tachiyomi: MangaKane",
-    "pkg": "eu.kanade.tachiyomi.extension.id.mangakane",
-    "apk": "tachiyomi-id.mangakane-v1.2.2.apk",
-    "lang": "id",
-    "code": 2,
-    "version": "1.2.2",
-    "nsfw": 0,
-    "sources": [
-      {
-        "name": "MangaKane",
-        "lang": "id",
-        "id": "9011143166227234134",
-        "baseUrl": "https://mangakane.com",
         "nsfw": false
       }
     ]
@@ -17834,10 +17834,10 @@
   {
     "name": "Tachiyomi: MangaTube",
     "pkg": "eu.kanade.tachiyomi.extension.pt.mangatube",
-    "apk": "tachiyomi-pt.mangatube-v1.2.4.apk",
+    "apk": "tachiyomi-pt.mangatube-v1.2.5.apk",
     "lang": "pt-BR",
-    "code": 4,
-    "version": "1.2.4",
+    "code": 5,
+    "version": "1.2.5",
     "nsfw": 0,
     "sources": [
       {
@@ -17906,10 +17906,10 @@
   {
     "name": "Tachiyomi: Meus Mangás",
     "pkg": "eu.kanade.tachiyomi.extension.pt.meusmangas",
-    "apk": "tachiyomi-pt.meusmangas-v1.2.4.apk",
+    "apk": "tachiyomi-pt.meusmangas-v1.2.5.apk",
     "lang": "pt-BR",
-    "code": 4,
-    "version": "1.2.4",
+    "code": 5,
+    "version": "1.2.5",
     "nsfw": 1,
     "sources": [
       {
@@ -17996,10 +17996,10 @@
   {
     "name": "Tachiyomi: Muito Mangá",
     "pkg": "eu.kanade.tachiyomi.extension.pt.muitomanga",
-    "apk": "tachiyomi-pt.muitomanga-v1.2.4.apk",
+    "apk": "tachiyomi-pt.muitomanga-v1.2.5.apk",
     "lang": "pt-BR",
-    "code": 4,
-    "version": "1.2.4",
+    "code": 5,
+    "version": "1.2.5",
     "nsfw": 1,
     "sources": [
       {
@@ -20415,17 +20415,17 @@
   {
     "name": "Tachiyomi: Zerobyw",
     "pkg": "eu.kanade.tachiyomi.extension.zh.zerobyw",
-    "apk": "tachiyomi-zh.zerobyw-v1.2.1.apk",
+    "apk": "tachiyomi-zh.zerobyw-v1.2.2.apk",
     "lang": "zh",
-    "code": 1,
-    "version": "1.2.1",
+    "code": 2,
+    "version": "1.2.2",
     "nsfw": 0,
     "sources": [
       {
         "name": "zero搬运网",
         "lang": "zh",
         "id": "8743284448117690086",
-        "baseUrl": "https://www.zerobywzio.com",
+        "baseUrl": "https://www.zerobywps5.com",
         "nsfw": false
       }
     ]
