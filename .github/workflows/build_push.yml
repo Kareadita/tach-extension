@@ -52,7 +52,6 @@ jobs:
             const numIndividualModules = 1;
             const individualModule = "src/all/Kavita";
             console.log(`Processing module: ${individualModule}`);
-            const numIndividualModules = process.env.NUM_INDIVIDUAL_MODULES;
             const chunkSize = process.env.CI_CHUNK_SIZE;
             const numIndividualChunks = Math.ceil(numIndividualModules / chunkSize);
             console.log(`Individual modules: ${numIndividualModules} (${numIndividualChunks} chunks of ${chunkSize})`);            
