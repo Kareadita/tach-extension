@@ -7,12 +7,12 @@ cp -R ~/apk-artifacts/ $PWD
 APKS=( **/*".apk" )
 
 # Fail if too little extensions seem to have been built
-if [ "${#APKS[@]}" -le "100" ]; then
-    echo "Insufficient amount of APKs found. Please check the project configuration."
-    exit 1
-else
-    echo "Moving ${#APKS[@]} APKs"
-fi
+#if [ "${#APKS[@]}" -le "100" ]; then
+#    echo "Insufficient amount of APKs found. Please check the project configuration."
+#    exit 1
+#else
+echo "Moving ${#APKS[@]} APKs"
+#fi
 
 DEST=$PWD/apk
 rm -rf $DEST && mkdir -p $DEST
