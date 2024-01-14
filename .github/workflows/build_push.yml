@@ -41,8 +41,9 @@ jobs:
       - name: Get number of modules
         run: |
           set -x
-          echo "|         |    +--- Project ':extensions:individual:all:kavita'" > projects.txt
-          echo "NUM_INDIVIDUAL_MODULES=$(cat projects.txt | grep '.*\:individual\:.*' | wc -l)" >> $GITHUB_ENV
+          ./gradlew -q projects | grep '.*extensions\:individual\:all\:kavita' > projects.txt
+          echo "NUM_INDIVIDUAL_MODULES=$(cat projects.txt | grep '.*\:individual\:all:kavita.*' | wc -l)" >> $GITHUB_ENV
+          cat projects.txt
 
       - id: generate-matrices
         name: Create output matrices
@@ -50,7 +51,6 @@ jobs:
         with:
           script: |
             const numIndividualModules = 1;
-            const individualModule = "src/all/Kavita";
             console.log(`Processing module: ${individualModule}`);
             const chunkSize = process.env.CI_CHUNK_SIZE;
             const numIndividualChunks = Math.ceil(numIndividualModules / chunkSize);
