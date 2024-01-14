@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - main
     paths-ignore:
       - '**.md'
       - '.github/workflows/issue_moderator.yml'
