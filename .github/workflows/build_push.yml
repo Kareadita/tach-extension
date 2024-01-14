@@ -37,31 +37,17 @@ jobs:
         with:
           java-version: 11
           distribution: adopt
+
       - name: Get number of modules
         run: |
           set -x
-#          ./gradlew -q projects | grep '.*extensions\:\(individual\|multisrc\)\:.*\:.*' > projects.txt
           echo "|         |    +--- Project ':extensions:individual:all:kavita'" > projects.txt
           echo "NUM_INDIVIDUAL_MODULES=$(cat projects.txt | grep '.*\:individual\:.*' | wc -l)" >> $GITHUB_ENV
-#          echo "NUM_MULTISRC_MODULES=$(cat projects.txt | grep '.*\:multisrc\:.*' | wc -l)" >> $GITHUB_ENV
 
       - id: generate-matrices
         name: Create output matrices
         uses: actions/github-script@v7
         with:
-#          script: |
-#            const numIndividualModules = process.env.NUM_INDIVIDUAL_MODULES;
-#            const numMultisrcModules = process.env.NUM_MULTISRC_MODULES;
-#            const chunkSize = process.env.CI_CHUNK_SIZE;
-#
-#            const numIndividualChunks = Math.ceil(numIndividualModules / chunkSize);
-#            const numMultisrcChunks = Math.ceil(numMultisrcModules / chunkSize);
-#
-#            console.log(`Individual modules: ${numIndividualModules} (${numIndividualChunks} chunks of ${chunkSize})`);
-#            console.log(`Multi-source modules: ${numMultisrcModules} (${numMultisrcChunks} chunks of ${chunkSize})`);
-#
-#            core.setOutput('individualMatrix', { 'chunk': [...Array(numIndividualChunks).keys()] });
-#            core.setOutput('multisrcMatrix', { 'chunk': [...Array(numMultisrcChunks).keys()] });
           script: |
             const numIndividualModules = 1;
             const individualModule = "src/all/Kavita";
