@@ -108,7 +108,7 @@ jobs:
 
       - name: Upload APKs (chunk ${{ matrix.chunk }})
         uses: actions/upload-artifact@v4
-        if: "github.repository == 'Kareadita/priv-tach-extensions'"
+        if: "github.repository == 'Kareadita/tach-extension'"
         with:
           name: "multisrc-apks-${{ matrix.chunk }}"
           path: "**/*.apk"
@@ -150,7 +150,7 @@ jobs:
 
       - name: Upload APKs (chunk ${{ matrix.chunk }})
         uses: actions/upload-artifact@v4
-        if: "github.repository == 'Kareadita/priv-tach-extensions'"
+        if: "github.repository == 'Kareadita/tach-extension'"
         with:
           name: "individual-apks-${{ matrix.chunk }}"
           path: "**/*.apk"
@@ -164,7 +164,7 @@ jobs:
     needs:
       - build_multisrc
       - build_individual
-    if: "github.repository == 'Kareadita/priv-tach-extensions'"
+    if: "github.repository == 'Kareadita/tach-extension'"
     runs-on: ubuntu-latest
     steps:
       - name: Download APK artifacts
