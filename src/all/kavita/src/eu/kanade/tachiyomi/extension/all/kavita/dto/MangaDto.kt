@@ -88,6 +88,29 @@ data class VolumeDto(
     val chapters: List<ChapterDto> = emptyList(),
 )
 
+enum class ChapterType {
+    Regular, // chapter with volume information
+    LooseLeaf, // chapter without volume information
+    SingleFileVolume,
+    Special,
+    ;
+
+    companion object {
+        fun of(chapter: ChapterDto, volume: VolumeDto): ChapterType =
+            if (volume.number == 100_000) {
+                Special
+            } else if (volume.number == -100_000) {
+                LooseLeaf
+            } else {
+                if (chapter.number == "-100000") {
+                    SingleFileVolume
+                } else {
+                    Regular
+                }
+            }
+    }
+}
+
 @Serializable
 data class ChapterDto(
     val id: Int,
