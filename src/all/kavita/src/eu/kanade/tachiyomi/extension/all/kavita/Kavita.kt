@@ -163,11 +163,10 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         }
     }
 
-    override fun popularMangaRequest(page: Int): Request {
+    private fun prepareRequest(page: Int, payload: String): Request {
         if (!isLogged) {
             doLogin()
         }
-        val payload = buildFilterBody(currentFilter)
         return POST(
             "$apiUrl/series/all-v2?pageNumber=$page&pageSize=20",
             headersBuilder().build(),
@@ -175,19 +174,16 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         )
     }
 
+    override fun popularMangaRequest(page: Int): Request {
+        return prepareRequest(page, buildFilterBody(MetadataPayload()))
+    }
+
     override fun latestUpdatesRequest(page: Int): Request {
-        if (!isLogged) {
-            doLogin()
-        }
-        // Hardcode exclude epubs
         val filter = FilterV2Dto(sortOptions = SortOptions(SortFieldEnum.LastChapterAdded.type, false))
         filter.statements.add(FilterStatementDto(FilterComparison.NotContains.type, FilterField.Formats.type, "3"))
         val payload = json.encodeToJsonElement(filter).toString()
-        return POST(
-            "$apiUrl/series/all-v2?pageNumber=$page&pageSize=20",
-            headersBuilder().build(),
-            payload.toRequestBody(JSON_MEDIA_TYPE),
-        )
+
+        return prepareRequest(page, payload)
     }
 
     override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
@@ -219,11 +215,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                     decoded_filter.statements.add(FilterStatementDto(FilterComparison.NotContains.type, FilterField.Formats.type, "3"))
 
                     // Make request with selected filters
-                    return POST(
-                        "$apiUrl/series/all-v2?pageNumber=$page&pageSize=20",
-                        headersBuilder().build(),
-                        json.encodeToJsonElement(decoded_filter).toString().toRequestBody(JSON_MEDIA_TYPE),
-                    )
+                    return prepareRequest(page, json.encodeToJsonElement(decoded_filter).toString())
                 } else {
                     Log.e(LOG_TAG, "Failed to decode SmartFilter: ${it.code}\n" + it.message)
                     throw IOException(helper.intl["version_exceptions_smart_filter"])
@@ -426,8 +418,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             }
         }
         newFilter.seriesNameQuery = query
-        currentFilter = newFilter
-        return popularMangaRequest(page)
+        return prepareRequest(page, buildFilterBody(newFilter))
     }
 
     /*
@@ -563,8 +554,6 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
     /*
      * FILTERING
      **/
-
-    private var currentFilter: MetadataPayload = MetadataPayload()
 
     /** Some variable names already exist. im not good at naming add Meta suffix */
     private var genresListMeta = emptyList<MetadataGenres>()
