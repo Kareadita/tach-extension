@@ -1184,7 +1184,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                             }
                         }
                     // libraries
-                    client.newCall(GET("$apiUrl/Library", headersBuilder().build()))
+                    client.newCall(GET("$apiUrl/Library/libraries", headersBuilder().build()))
                         .execute().use { response ->
                             libraryListMeta = try {
                                 response.body.use { json.decodeFromString(it.string()) }
