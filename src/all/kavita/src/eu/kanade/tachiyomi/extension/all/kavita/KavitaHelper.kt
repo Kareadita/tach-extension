@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.extension.all.kavita
 
 import eu.kanade.tachiyomi.extension.all.kavita.dto.ChapterDto
+import eu.kanade.tachiyomi.extension.all.kavita.dto.ChapterType
 import eu.kanade.tachiyomi.extension.all.kavita.dto.PaginationInfo
 import eu.kanade.tachiyomi.extension.all.kavita.dto.SeriesDto
 import eu.kanade.tachiyomi.extension.all.kavita.dto.VolumeDto
@@ -75,57 +76,32 @@ class KavitaHelper {
             }
         }
     }
-    fun chapterFromObject(obj: ChapterDto): SChapter = SChapter.create().apply {
-        url = obj.id.toString()
-        name = if (obj.number == "0" && obj.isSpecial) {
-            // This is a special. Chapter name is special name
-            obj.range
-        } else {
-            val cleanedName = obj.title.replaceFirst("^0+(?!$)".toRegex(), "")
-            "Chapter $cleanedName"
-        }
-        date_upload = parseDate(obj.created)
-        chapter_number = obj.number.toFloat()
-        scanlator = "${obj.pages} pages"
-    }
 
-    fun chapterFromVolume(obj: ChapterDto, volume: VolumeDto): SChapter =
+    fun chapterFromVolume(chapter: ChapterDto, volume: VolumeDto): SChapter =
         SChapter.create().apply {
-            // If there are multiple chapters to this volume, then prefix with Volume number
-            if (volume.chapters.isNotEmpty() && obj.number != "0") {
-                // This volume is not volume 0, hence they are not loose chapters
-                // We just add a nice Volume X to the chapter title
-                // Chapter-based Volume
-                name = "Volume ${volume.number} Chapter ${obj.number}"
-                chapter_number = obj.number.toFloat()
-            } else if (obj.number == "0") {
-                // Both specials and volume has chapter number 0
-                if (volume.number == 0) {
-                    // Treat as special
-                    // Special is not in a volume
-                    if (obj.range == "") {
-                        // Special does not have any Title
-                        name = "Chapter 0"
-                        chapter_number = obj.number.toFloat()
-                    } else {
-                        // We use it's own special tile
-                        name = obj.range
-                        chapter_number = obj.number.toFloat()
-                    }
-                } else {
-                    // Is a single-file volume
-                    // We encode the chapter number to support tracking
-                    name = "Volume ${volume.number}"
-                    chapter_number = volume.number.toFloat() / 10000
-                }
-            } else {
-                name = "Unhandled Else Volume ${volume.number}"
-            }
-            url = obj.id.toString()
-            date_upload = parseDate(obj.created)
+            val type = ChapterType.of(chapter, volume)
 
-            scanlator = "${obj.pages} pages"
+            name = when (type) {
+                ChapterType.Regular -> "Volume ${volume.number} Chapter ${chapter.number}"
+                ChapterType.SingleFileVolume -> "Volume ${volume.number}"
+                ChapterType.Special -> chapter.range
+                ChapterType.LooseLeaf -> {
+                    val cleanedName = chapter.title.replaceFirst("^0+(?!$)".toRegex(), "")
+                    "Chapter $cleanedName"
+                }
+            }
+
+            chapter_number = if (type == ChapterType.SingleFileVolume) {
+                volume.number.toFloat() / 10000
+            } else {
+                chapter.number.toFloat()
+            }
+
+            url = chapter.id.toString()
+            date_upload = parseDate(chapter.created)
+            scanlator = "${chapter.pages} pages"
         }
+
     val intl = Intl(
         language = Locale.getDefault().toString(),
         baseLanguage = "en",

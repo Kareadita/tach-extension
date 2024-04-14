@@ -504,16 +504,8 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             val allChapterList = mutableListOf<SChapter>()
             volumes.forEach { volume ->
                 run {
-                    if (volume.number == 0) {
-                        // Regular chapters
-                        volume.chapters.map {
-                            allChapterList.add(helper.chapterFromObject(it))
-                        }
-                    } else {
-                        // Volume chapter
-                        volume.chapters.map {
-                            allChapterList.add(helper.chapterFromVolume(it, volume))
-                        }
+                    volume.chapters.map {
+                        allChapterList.add(helper.chapterFromVolume(it, volume))
                     }
                 }
             }
