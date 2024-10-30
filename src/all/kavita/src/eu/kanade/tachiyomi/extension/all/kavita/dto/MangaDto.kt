@@ -123,4 +123,13 @@ data class ChapterDto(
     val coverImageLocked: Boolean,
     val volumeId: Int,
     val created: String,
+    val files: List<FileDto>? = null,
+) {
+    val fileCount: Int
+        get() = files?.size ?: 0
+}
+
+@Serializable
+data class FileDto(
+    val id: Int,
 )

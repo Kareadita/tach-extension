@@ -98,6 +98,13 @@ class KavitaHelper {
             }
 
             url = chapter.id.toString()
+
+            if (chapter.fileCount > 1) {
+                // salt/offset to recognize chapters with new merged part-chapters as new and hence unread
+                chapter_number += 0.001f * chapter.fileCount
+                url = "${url}_${chapter.fileCount}"
+            }
+
             date_upload = parseDate(chapter.created)
             scanlator = "${chapter.pages} pages"
         }
