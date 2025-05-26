@@ -18,6 +18,26 @@ allprojects {
         google()
         maven(url = "https://jitpack.io")
     }
+
+    plugins.withType<JavaPlugin> {
+        configure<JavaPluginExtension> {
+            toolchain {
+                languageVersion.set(JavaLanguageVersion.of(8))
+            }
+        }
+    }
+
+    plugins.withId("org.jetbrains.kotlin.jvm") {
+        configure<org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension> {
+            jvmToolchain(8)
+        }
+    }
+
+    plugins.withId("org.jetbrains.kotlin.android") {
+        configure<org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension> {
+            jvmToolchain(8)
+        }
+    }
 }
 
 tasks.register<Delete>("clean") {
