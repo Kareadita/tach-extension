@@ -26,6 +26,9 @@ val sortableList = listOf(
     Pair("Item added", 4),
     Pair("Time to Read", 5),
     Pair("Release year", 6),
+    Pair("Read progress", 7),
+    Pair("Average rating", 8),
+    Pair("Random", 9),
 )
 
 class StatusFilter(name: String) : Filter.CheckBox(name, false)
