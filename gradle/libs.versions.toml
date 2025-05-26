@@ -1,13 +1,13 @@
 [versions]
-kotlin_version = "1.7.21"
-coroutines_version = "1.6.4"
-serialization_version = "1.4.0"
+kotlin_version = "2.0.0"
+coroutines_version = "1.8.0"
+serialization_version = "1.7.0"
 
 [libraries]
 gradle-agp = { module = "com.android.tools.build:gradle", version = "8.10.0" }
 gradle-kotlin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin_version" }
 gradle-serialization = { module = "org.jetbrains.kotlin:kotlin-serialization", version.ref = "kotlin_version" }
-gradle-kotlinter = { module = "org.jmailen.gradle:kotlinter-gradle", version = "3.13.0" }
+gradle-kotlinter = { module = "org.jmailen.gradle:kotlinter-gradle", version = "5.0.2" }
 
 tachiyomi-lib = { module = "com.github.tachiyomiorg:extensions-lib", version = "1.4.4" }
 
