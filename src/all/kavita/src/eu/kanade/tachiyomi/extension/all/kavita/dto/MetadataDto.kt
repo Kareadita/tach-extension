@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.extension.all.kavita.dto
 
 import kotlinx.serialization.Serializable
+
 /**
 * This file contains all class for filtering
 *  */
@@ -67,7 +68,6 @@ data class MetadataPayload(
     var tags_e: ArrayList<Int> = arrayListOf<Int>(),
     var ageRating_i: ArrayList<Int> = arrayListOf<Int>(),
     var ageRating_e: ArrayList<Int> = arrayListOf<Int>(),
-
     var formats: ArrayList<Int> = arrayListOf<Int>(),
     var collections_i: ArrayList<Int> = arrayListOf<Int>(),
     var collections_e: ArrayList<Int> = arrayListOf<Int>(),
@@ -76,14 +76,12 @@ data class MetadataPayload(
     // _i = included, _e = excluded
     var language_i: ArrayList<String> = arrayListOf<String>(),
     var language_e: ArrayList<String> = arrayListOf<String>(),
-
     var libraries_i: ArrayList<Int> = arrayListOf<Int>(),
     var libraries_e: ArrayList<Int> = arrayListOf<Int>(),
     var pubStatus: ArrayList<Int> = arrayListOf<Int>(),
     var seriesNameQuery: String = "",
     var releaseYearRangeMin: Int = 0,
     var releaseYearRangeMax: Int = 0,
-
     var peopleWriters: ArrayList<Int> = arrayListOf<Int>(),
     var peoplePenciller: ArrayList<Int> = arrayListOf<Int>(),
     var peopleInker: ArrayList<Int> = arrayListOf<Int>(),

@@ -3,19 +3,26 @@ package eu.kanade.tachiyomi.extension.all.kavita.dto
 import kotlinx.serialization.Serializable
 
 @Serializable
-enum class MangaFormat(val format: Int) {
+enum class MangaFormat(
+    val format: Int,
+) {
     Image(0),
     Archive(1),
     Unknown(2),
     Epub(3),
     Pdf(4),
     ;
+
     companion object {
         private val map = PersonRole.values().associateBy(PersonRole::role)
+
         fun fromInt(type: Int) = map[type]
     }
 }
-enum class PersonRole(val role: Int) {
+
+enum class PersonRole(
+    val role: Int,
+) {
     Other(1),
     Writer(3),
     Penciller(4),
@@ -28,8 +35,10 @@ enum class PersonRole(val role: Int) {
     Character(11),
     Translator(12),
     ;
+
     companion object {
         private val map = PersonRole.values().associateBy(PersonRole::role)
+
         fun fromInt(type: Int) = map[type]
     }
 }
@@ -96,7 +105,10 @@ enum class ChapterType {
     ;
 
     companion object {
-        fun of(chapter: ChapterDto, volume: VolumeDto): ChapterType =
+        fun of(
+            chapter: ChapterDto,
+            volume: VolumeDto,
+        ): ChapterType =
             if (volume.number == 100_000) {
                 Special
             } else if (volume.number == -100_000) {

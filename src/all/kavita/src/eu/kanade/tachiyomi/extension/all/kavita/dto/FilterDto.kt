@@ -12,12 +12,21 @@ data class FilterV2Dto(
     val sortOptions: SortOptions = SortOptions(),
     val limitTo: Int = 0,
 ) {
-    fun addStatement(comparison: FilterComparison, field: FilterField, value: String) {
+    fun addStatement(
+        comparison: FilterComparison,
+        field: FilterField,
+        value: String,
+    ) {
         if (value.isNotBlank()) {
             statements.add(FilterStatementDto(comparison.type, field.type, value))
         }
     }
-    fun addStatement(comparison: FilterComparison, field: FilterField, values: java.util.ArrayList<out Any>) {
+
+    fun addStatement(
+        comparison: FilterComparison,
+        field: FilterField,
+        values: java.util.ArrayList<out Any>,
+    ) {
         if (values.isNotEmpty()) {
             statements.add(FilterStatementDto(comparison.type, field.type, values.joinToString(",")))
         }
@@ -29,6 +38,7 @@ data class FilterV2Dto(
             addStatement(FilterComparison.NotContains, it.first, it.third)
         }
     }
+
     fun addPeople(list: List<Pair<FilterField, ArrayList<Int>>>) {
         list.map {
             addStatement(FilterComparison.MustContains, it.first, it.second)
@@ -42,11 +52,12 @@ data class FilterStatementDto(
     val comparison: Int,
     val field: Int,
     val value: String,
-
 )
 
 @Serializable
-enum class SortFieldEnum(val type: Int) {
+enum class SortFieldEnum(
+    val type: Int,
+) {
     SortName(1),
     CreatedDate(2),
     LastModifiedDate(3),
@@ -57,6 +68,7 @@ enum class SortFieldEnum(val type: Int) {
 
     companion object {
         private val map = SortFieldEnum.values().associateBy(SortFieldEnum::type)
+
         fun fromInt(type: Int) = map[type]
     }
 }
@@ -74,7 +86,9 @@ enum class FilterCombination {
 }
 
 @Serializable
-enum class FilterField(val type: Int) {
+enum class FilterField(
+    val type: Int,
+) {
     Summary(0),
     SeriesName(1),
     PublicationStatus(2),
@@ -104,7 +118,9 @@ enum class FilterField(val type: Int) {
 }
 
 @Serializable
-enum class FilterComparison(val type: Int) {
+enum class FilterComparison(
+    val type: Int,
+) {
     Equal(0),
     GreaterThan(1),
     GreaterThanEqual(2),

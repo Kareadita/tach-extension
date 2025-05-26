@@ -16,20 +16,22 @@ import java.util.Locale
 import java.util.TimeZone
 
 class KavitaHelper {
-    val json = Json {
-        isLenient = true
-        ignoreUnknownKeys = true
-        allowSpecialFloatingPointValues = true
-        useArrayPolymorphism = true
-        prettyPrint = true
-    }
-    inline fun <reified T : Enum<T>> safeValueOf(type: String): T {
-        return java.lang.Enum.valueOf(T::class.java, type)
-    }
-    val dateFormatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSSSS", Locale.US)
-        .apply { timeZone = TimeZone.getTimeZone("UTC") }
-    fun parseDate(dateAsString: String): Long =
-        dateFormatter.parse(dateAsString)?.time ?: 0
+    val json =
+        Json {
+            isLenient = true
+            ignoreUnknownKeys = true
+            allowSpecialFloatingPointValues = true
+            useArrayPolymorphism = true
+            prettyPrint = true
+        }
+
+    inline fun <reified T : Enum<T>> safeValueOf(type: String): T = java.lang.Enum.valueOf(T::class.java, type)
+
+    val dateFormatter =
+        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSSSS", Locale.US)
+            .apply { timeZone = TimeZone.getTimeZone("UTC") }
+
+    fun parseDate(dateAsString: String): Long = dateFormatter.parse(dateAsString)?.time ?: 0
 
     fun hasNextPage(response: Response): Boolean {
         val paginationHeader = response.header("Pagination")
@@ -41,20 +43,26 @@ class KavitaHelper {
         return !hasNextPage
     }
 
-    fun getIdFromUrl(url: String): Int {
-        return url.split("/").last().toInt()
-    }
+    fun getIdFromUrl(url: String): Int = url.split("/").last().toInt()
 
-    fun createSeriesDto(obj: SeriesDto, baseUrl: String, apiKey: String): SManga =
+    fun createSeriesDto(
+        obj: SeriesDto,
+        baseUrl: String,
+        apiKey: String,
+    ): SManga =
         SManga.create().apply {
             url = "$baseUrl/Series/${obj.id}"
             title = obj.name
             // Deprecated: description = obj.summary
             thumbnail_url = "$baseUrl/image/series-cover?seriesId=${obj.id}&apiKey=$apiKey"
         }
+
     class CompareChapters {
         companion object : Comparator<SChapter> {
-            override fun compare(a: SChapter, b: SChapter): Int {
+            override fun compare(
+                a: SChapter,
+                b: SChapter,
+            ): Int {
                 if (a.chapter_number < 1.0 && b.chapter_number < 1.0) {
                     // Both are volumes, multiply by 100 and do normal sort
                     return if ((a.chapter_number * 100) < (b.chapter_number * 100)) {
@@ -77,25 +85,30 @@ class KavitaHelper {
         }
     }
 
-    fun chapterFromVolume(chapter: ChapterDto, volume: VolumeDto): SChapter =
+    fun chapterFromVolume(
+        chapter: ChapterDto,
+        volume: VolumeDto,
+    ): SChapter =
         SChapter.create().apply {
             val type = ChapterType.of(chapter, volume)
 
-            name = when (type) {
-                ChapterType.Regular -> "Volume ${volume.number} Chapter ${chapter.number}"
-                ChapterType.SingleFileVolume -> "Volume ${volume.number}"
-                ChapterType.Special -> chapter.range
-                ChapterType.LooseLeaf -> {
-                    val cleanedName = chapter.title.replaceFirst("^0+(?!$)".toRegex(), "")
-                    "Chapter $cleanedName"
+            name =
+                when (type) {
+                    ChapterType.Regular -> "Volume ${volume.number} Chapter ${chapter.number}"
+                    ChapterType.SingleFileVolume -> "Volume ${volume.number}"
+                    ChapterType.Special -> chapter.range
+                    ChapterType.LooseLeaf -> {
+                        val cleanedName = chapter.title.replaceFirst("^0+(?!$)".toRegex(), "")
+                        "Chapter $cleanedName"
+                    }
                 }
-            }
 
-            chapter_number = if (type == ChapterType.SingleFileVolume) {
-                volume.number.toFloat() / 10000
-            } else {
-                chapter.number.toFloat()
-            }
+            chapter_number =
+                if (type == ChapterType.SingleFileVolume) {
+                    volume.number.toFloat() / 10000
+                } else {
+                    chapter.number.toFloat()
+                }
 
             url = chapter.id.toString()
 
@@ -109,16 +122,17 @@ class KavitaHelper {
             scanlator = "${chapter.pages} pages"
         }
 
-    val intl = Intl(
-        language = Locale.getDefault().toString(),
-        baseLanguage = "en",
-        availableLanguages = KavitaInt.AVAILABLE_LANGS,
-        classLoader = this::class.java.classLoader!!,
-        createMessageFileName = { lang ->
-            when (lang) {
-                KavitaInt.SPANISH_LATAM -> Intl.createDefaultMessageFileName(KavitaInt.SPANISH)
-                else -> Intl.createDefaultMessageFileName(lang)
-            }
-        },
-    )
+    val intl =
+        Intl(
+            language = Locale.getDefault().toString(),
+            baseLanguage = "en",
+            availableLanguages = KavitaInt.AVAILABLE_LANGS,
+            classLoader = this::class.java.classLoader!!,
+            createMessageFileName = { lang ->
+                when (lang) {
+                    KavitaInt.SPANISH_LATAM -> Intl.createDefaultMessageFileName(KavitaInt.SPANISH)
+                    else -> Intl.createDefaultMessageFileName(lang)
+                }
+            },
+        )
 }

@@ -6,12 +6,13 @@ object KavitaInt {
     const val SPANISH_LATAM = "es-419"
     const val FRENCH = "fr_FR"
     const val NORWEGIAN = "nb_NO"
-    val AVAILABLE_LANGS = setOf(
-        ENGLISH,
-        SPANISH,
-        SPANISH_LATAM,
-        NORWEGIAN,
-        FRENCH,
-    )
+    val AVAILABLE_LANGS =
+        setOf(
+            ENGLISH,
+            SPANISH,
+            SPANISH_LATAM,
+            NORWEGIAN,
+            FRENCH,
+        )
     const val KAVITA_NAME = "Kavita"
 }
