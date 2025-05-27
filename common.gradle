@@ -85,8 +85,8 @@ android {
                 "-opt-in=kotlinx.serialization.ExperimentalSerializationApi",
                 "-Xjsr305=strict"
         ]
-        languageVersion = "2.0"
-        apiVersion = "2.0"
+        languageVersion = "2.1"
+        apiVersion = "2.1"
     }
 }
 
