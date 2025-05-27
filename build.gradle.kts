@@ -22,20 +22,20 @@ allprojects {
     plugins.withType<JavaPlugin> {
         configure<JavaPluginExtension> {
             toolchain {
-                languageVersion.set(JavaLanguageVersion.of(8))
+                languageVersion.set(JavaLanguageVersion.of(17))
             }
         }
     }
 
     plugins.withId("org.jetbrains.kotlin.jvm") {
         configure<org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension> {
-            jvmToolchain(8)
+            jvmToolchain(17)
         }
     }
 
     plugins.withId("org.jetbrains.kotlin.android") {
         configure<org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension> {
-            jvmToolchain(8)
+            jvmToolchain(17)
         }
     }
 }
