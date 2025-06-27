@@ -1,39 +1,31 @@
-| Build | Up to date | Install to app |
-|-------|------------|----------------|
-| [![Build](https://github.com/yuzono/tachiyomi-extensions/actions/workflows/build_push.yml/badge.svg)](https://github.com/yuzono/tachiyomi-extensions/actions/workflows/build_push.yml) | [![Updated](https://img.shields.io/github/actions/workflow/status/yuzono/tachiyomi-extensions/auto_cherry_pick.yml?label=Updated&labelColor=27303D)](https://github.com/yuzono/tachiyomi-extensions/actions/workflows/auto_cherry_pick.yml) | [![Install](https://img.shields.io/badge/Click%20here%20to%20install%20repo-gray?style=flat&labelColor=red)](https://intradeus.github.io/http-protocol-redirector/?r=tachiyomi://add-repo?url=https://raw.githubusercontent.com/yuzono/manga-repo/repo/index.min.json) |
+| Build                                                                                                                                                                              | Up to date                                                                                                                                                                                                                                        | Install to app                                                                                                                                                                                                                                                                 |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [![Build](https://github.com/Kareadita/tach-extensions/actions/workflows/build_push.yml/badge.svg)](https://github.com/Kareadita/tach-extensions/actions/workflows/build_push.yml) | [![Updated](https://img.shields.io/github/actions/workflow/status/Kareadita/tachiyomi-extensions/auto_cherry_pick.yml?label=Updated&labelColor=27303D)](https://github.com/Kareadita/tachiyomi-extensions/actions/workflows/auto_cherry_pick.yml) | [![Install](https://img.shields.io/badge/Click%20here%20to%20install%20repo-gray?style=flat&labelColor=red)](https://intradeus.github.io/http-protocol-redirector/?r=tachiyomi://add-repo?url=https://raw.githubusercontent.com/Kareadita/tach-extensions/repo/index.min.json) |
 
-# Komikku / Mihon / Tachiyomi Extensions
+# Kavita Extension
 
-This repository contains extension catalogues which are compatible with [Komikku](https://github.com/komikku-app/komikku) and Mihon / Tachiyomi or other forks.
-
-This repository automatically merges any updates from [Keiyoushi](https://github.com/keiyoushi/extensions-source) every 6 hours to have the best of community contributions. Beside from that, it has a few of my developed extensions or some improvements. Enjoy!
-
-Some extensions from this repo provide better support for Komikku's `Suggestions` feature.
+This repository contains the Kavita extension which is compatible with [Komikku](https://github.com/komikku-app/komikku) and Mihon / Tachiyomi or other forks.
 
 ## Recommend App
 
-### [Komikku](https://github.com/komikku-app/komikku)
-
 ### [Mihon](https://github.com/mihonapp/mihon)
+
+### [Komikku](https://github.com/komikku-app/komikku)
 
 ## How to add the repo
 
-**If you are new to repository/extensions, please read the [Yūzōnō Getting Started guide](https://yuzono.github.io/docs/guides/getting-started#adding-the-extension-repo) first.**
-
-* You can add our repo by visiting the [Yūzōnō Website](https://yuzono.github.io/add-repo)
-* Otherwise, copy & paste the following URL:
+[![Install](https://img.shields.io/badge/Click%20here%20to%20install%20repo-gray?style=flat&labelColor=red)](https://intradeus.github.io/http-protocol-redirector/?r=tachiyomi://add-repo?url=https://raw.githubusercontent.com/Kareadita/tach-extensions/repo/index.min.json)
+Otherwise, copy & paste the following URL:
 
 ```html
-https://raw.githubusercontent.com/yuzono/manga-repo/repo/index.min.json
+https://raw.githubusercontent.com/Kareadita/tach-extensions/repo/index.min.json
 ```
 
 # Requests
 
-To request a new source or bug fix, [create an issue](https://github.com/yuzono/tachiyomi-extensions/issues/new/choose).
+To request a new feature or bug fix, [create an issue](https://github.com/Kareadita/tach-extensions/issues/new/choose).
 
-Please note that creating an issue does not mean that the source will be added or fixed in a timely
-fashion, because the work is volunteer-based. Some sources may also be impossible to do or prohibitively
-difficult to maintain.
+Please note that creating an issue does not mean that the feature will be added or fixed in a timely fashion, because the work is volunteer-based. Some features may also be impossible to do or prohibitively difficult to maintain.
 
 If you would like to see a request fulfilled and have the necessary skills to do so, consider contributing!
 Issues are up-for-grabs for any developer if there is no assigned user already.
@@ -42,7 +34,7 @@ Issues are up-for-grabs for any developer if there is no assigned user already.
 
 Contributions are welcome!
 
-Check out the repo's [issue backlog](https://github.com/yuzono/tachiyomi-extensions/issues) for source requests and bug reports.
+Check out the repo's [issue backlog](https://github.com/Kareadita/tach-extensions/issues) for feature requests and bug reports.
 
 To get started with development, see [CONTRIBUTING.md](./CONTRIBUTING.md).
 
