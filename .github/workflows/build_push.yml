@@ -145,7 +145,7 @@ jobs:
       - name: Checkout repo branch
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          repository: yuzono/manga-repo
+          repository: Kareadita/tach-extension
           token: ${{ secrets.BOT_PAT }}
           ref: repo
           path: repo
