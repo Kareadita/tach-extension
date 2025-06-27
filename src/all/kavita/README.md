@@ -1,37 +1,41 @@
-# Kavita
+# Komga
 
 Table of Content
 - [FAQ](#FAQ)
-  - [Why do I see no manga?](#why-do-i-see-no-manga)
-  - [Where can I get more information about Kavita?](#where-can-i-get-more-information-about-kavita)
-  - [The Kavita extension stopped working?](#the-kavita-extension-stopped-working)
-  - [Can I add more than one Kavita server or user?](#can-i-add-more-than-one-kavita-server-or-user)
-  - [Can I test the Kavita extension before setting up my own server?](#can-i-test-the-kavita-extension-before-setting-up-my-own-server)
+    - [Why do I see no manga?](#why-do-i-see-no-manga)
+    - [Where can I get more information about Komga?](#where-can-i-get-more-information-about-komga)
+    - [The Komga extension stopped working?](#the-komga-extension-stopped-working)
+    - [Can I add more than one Komga server or user?](#can-i-add-more-than-one-komga-server-or-user)
+    - [Can I test the Komga extension before setting up my own server?](#can-i-test-the-komga-extension-before-setting-up-my-own-server)
 - [Guides](#Guides)
-  - [How do I add my Kavita server to Tachiyomi?](#how-do-i-add-my-kavita-server-to-tachiyomi)
-
-Don't find the question you are look for go check out our general FAQs and Guides over at [Extension FAQ](https://tachiyomi.org/help/faq/#extensions) or [Getting Started](https://tachiyomi.org/help/guides/getting-started/#installation)
-
-Kavita also has a documentation about the Tachiyomi Kavita extension at the [Kavita wiki](https://wiki.kavitareader.com/en/guides/misc/tachiyomi).
+    - [How do I add my Komga server to the app?](#how-do-i-add-my-komga-server-to-the-app)
 
 ## FAQ
 
 ### Why do I see no manga?
-Kavita is a self-hosted comic/manga media server.
+Komga is a self-hosted comic/manga media server.
 
-### Where can I get more information about Kavita?
-You can visit the [Kavita](https://www.kavitareader.com/) website for for more information.
+### Where can I get more information about Komga?
+You can visit the [Komga](https://komga.org/) website for for more information.
 
-### The Kavita extension stopped working?
-Make sure that your Kavita server and extension are on the newest version.
+### The Komga extension stopped working?
+Make sure that your Komga server and extension are on the newest version.
 
-### Can I add more than one Kavita server or user?
-Yes, currently you can add up to 3 different Kavita instances to Tachiyomi.
+### Can I add more than one Komga server or user?
+Yes, currently you can add up to 11 different Komga instances to the app. The number of instances
+available can be customized in extension settings.
 
-### Can I test the Kavita extension before setting up my own server?
-Yes, you can try it out with the DEMO servers OPDS url `https://demo.kavitareader.com/api/opds/aca1c50d-7e08-4f37-b356-aecd6bf69b72`.
+### Can I test the Komga extension before setting up my own server?
+Yes, you can try it out with the DEMO server `https://demo.komga.org`, username `demo@komga.org` and
+password `komga-demo`.
+
+### Why are EPUB chapters/books missing?
+Mihon/Tachiyomi does not support reading text. EPUB files containing only images will be available
+if your Komga server version is [1.9.0](https://github.com/gotson/komga/releases/tag/1.9.0)
+or newer.
 
 ## Guides
 
-### How do I add my Kavita server to Tachiyomi?
-Go into the settings of the Kavita extension from the Extension tab in Browse and fill in your OPDS url.
+### How do I add my Komga server to the app?
+Go into the settings of the Komga extension (under Browse -> Extensions) and fill in your server
+address and login details.

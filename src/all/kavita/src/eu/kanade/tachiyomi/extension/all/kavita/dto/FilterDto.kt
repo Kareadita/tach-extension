@@ -8,7 +8,7 @@ data class FilterV2Dto(
     val id: Int? = null,
     val name: String? = null,
     val statements: MutableList<FilterStatementDto> = mutableListOf(),
-    val combination: Int = 0, // FilterCombination = FilterCombination.And,
+    val combination: Int = FilterCombination.And.ordinal,
     val sortOptions: SortOptions = SortOptions(),
     val limitTo: Int = 0,
 ) {
@@ -17,20 +17,22 @@ data class FilterV2Dto(
             statements.add(FilterStatementDto(comparison.type, field.type, value))
         }
     }
-    fun addStatement(comparison: FilterComparison, field: FilterField, values: java.util.ArrayList<out Any>) {
+
+    fun addStatement(comparison: FilterComparison, field: FilterField, values: List<Any>) {
         if (values.isNotEmpty()) {
             statements.add(FilterStatementDto(comparison.type, field.type, values.joinToString(",")))
         }
     }
 
-    fun addContainsNotTriple(list: List<Triple<FilterField, java.util.ArrayList<out Any>, ArrayList<Int>>>) {
-        list.map {
+    fun addContainsNotTriple(list: List<Triple<FilterField, List<Any>, List<Int>>>) {
+        list.forEach {
             addStatement(FilterComparison.Contains, it.first, it.second)
             addStatement(FilterComparison.NotContains, it.first, it.third)
         }
     }
-    fun addPeople(list: List<Pair<FilterField, ArrayList<Int>>>) {
-        list.map {
+
+    fun addPeople(list: List<Pair<FilterField, List<Int>>>) {
+        list.forEach {
             addStatement(FilterComparison.MustContains, it.first, it.second)
         }
     }
@@ -38,11 +40,15 @@ data class FilterV2Dto(
 
 @Serializable
 data class FilterStatementDto(
-    // todo: Create custom serializator for comparison and field and remove .type extension in Kavita.kt
     val comparison: Int,
     val field: Int,
     val value: String,
+)
 
+@Serializable
+data class SortOptions(
+    var sortField: Int = SortFieldEnum.AverageRating.type,
+    var isAscending: Boolean = true,
 )
 
 @Serializable
@@ -53,19 +59,16 @@ enum class SortFieldEnum(val type: Int) {
     LastChapterAdded(4),
     TimeToRead(5),
     ReleaseYear(6),
+    ReadProgress(7),
+    AverageRating(8),
+    Random(9),
     ;
 
     companion object {
-        private val map = SortFieldEnum.values().associateBy(SortFieldEnum::type)
+        private val map = values().associateBy(SortFieldEnum::type)
         fun fromInt(type: Int) = map[type]
     }
 }
-
-@Serializable
-data class SortOptions(
-    var sortField: Int = SortFieldEnum.SortName.type,
-    var isAscending: Boolean = true,
-)
 
 @Serializable
 enum class FilterCombination {
@@ -101,6 +104,18 @@ enum class FilterField(val type: Int) {
     ReadTime(23),
     Path(24),
     FilePath(25),
+    WantToRead(26),
+    ReadingDate(27),
+    AverageRating(28),
+    Imprint(29),
+    Team(30),
+    Location(31),
+    ReadLast(32),
+    ;
+
+    companion object {
+        fun fromType(type: Int): FilterField? = values().find { it.type == type }
+    }
 }
 
 @Serializable
@@ -121,4 +136,46 @@ enum class FilterComparison(val type: Int) {
     IsAfter(13),
     IsInLast(14),
     IsNotInLast(15),
+    IsEmpty(16),
+}
+
+@Serializable
+data class PersonSearchDto(
+    val id: Int,
+    val name: String,
+    val role: Int? = null,
+)
+
+enum class PersonRole(val id: Int) {
+    Writer(0),
+    Penciller(1),
+    Inker(2),
+    Colorist(3),
+    Letterer(4),
+    CoverArtist(5),
+    Editor(6),
+    Publisher(7),
+    Character(8),
+    Translator(9),
+    ;
+
+    companion object {
+        private val map = values().associateBy(PersonRole::id)
+        fun fromId(id: Int): PersonRole? = map[id]
+    }
+}
+
+fun PersonRole.toFilterField(): FilterField? {
+    return when (this) {
+        PersonRole.Writer -> FilterField.Writers
+        PersonRole.Penciller -> FilterField.Penciller
+        PersonRole.Inker -> FilterField.Inker
+        PersonRole.Colorist -> FilterField.Colorist
+        PersonRole.Letterer -> FilterField.Letterer
+        PersonRole.CoverArtist -> FilterField.CoverArtist
+        PersonRole.Editor -> FilterField.Editor
+        PersonRole.Publisher -> FilterField.Publisher
+        PersonRole.Character -> FilterField.Characters
+        PersonRole.Translator -> FilterField.Translators
+    }
 }

@@ -1,8 +1,9 @@
+// Generic response and authentication models
 package eu.kanade.tachiyomi.extension.all.kavita.dto
 
 import kotlinx.serialization.Serializable
 
-@Serializable // Used to process login
+@Serializable
 data class AuthenticationDto(
     val username: String,
     val token: String,
@@ -20,9 +21,9 @@ data class PaginationInfo(
 @Serializable
 data class ServerInfoDto(
     val installId: String,
-    val os: String,
+//    val os: String,
     val isDocker: Boolean,
-    val dotnetVersion: String,
+//    val dotnetVersion: String,
     val kavitaVersion: String,
-    val numOfCores: Int,
+//    val numOfCores: Int,
 )
