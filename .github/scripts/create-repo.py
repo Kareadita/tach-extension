@@ -9,8 +9,10 @@ PACKAGE_NAME_REGEX = re.compile(r"package: name='([^']+)'")
 VERSION_CODE_REGEX = re.compile(r"versionCode='([^']+)'")
 VERSION_NAME_REGEX = re.compile(r"versionName='([^']+)'")
 IS_NSFW_REGEX = re.compile(r"'tachiyomi.extension.nsfw' value='([^']+)'")
-APPLICATION_LABEL_REGEX = re.compile(r"^application-label:'([^']+)'", re.MULTILINE)
-APPLICATION_ICON_320_REGEX = re.compile(r"^application-icon-320:'([^']+)'", re.MULTILINE)
+APPLICATION_LABEL_REGEX = re.compile(
+    r"^application-label:'([^']+)'", re.MULTILINE)
+APPLICATION_ICON_320_REGEX = re.compile(
+    r"^application-icon-320:'([^']+)'", re.MULTILINE)
 LANGUAGE_REGEX = re.compile(r"tachiyomi-([^.]+)")
 
 *_, ANDROID_BUILD_TOOLS = (Path(os.environ["ANDROID_HOME"]) / "build-tools").iterdir()
@@ -36,7 +38,8 @@ for apk in REPO_APK_DIR.iterdir():
         ]
     ).decode()
 
-    package_info = next(x for x in badging.splitlines() if x.startswith("package: "))
+    package_info = next(x for x in badging.splitlines()
+                        if x.startswith("package: "))
     package_name = PACKAGE_NAME_REGEX.search(package_info).group(1)
     application_icon = APPLICATION_ICON_320_REGEX.search(badging).group(1)
 
@@ -85,4 +88,17 @@ for apk in REPO_APK_DIR.iterdir():
     index_min_data.append(min_data)
 
 with REPO_DIR.joinpath("index.min.json").open("w", encoding="utf-8") as index_file:
-    json.dump(index_min_data, index_file, ensure_ascii=False, separators=(",", ":"))
+    json.dump(index_min_data, index_file,
+              ensure_ascii=False, separators=(",", ":"))
+
+# --- Generate badge-version.json ---
+if index_min_data:
+    latest_version = index_min_data[0]["version"]
+    badge_data = {
+        "schemaVersion": 1,
+        "label": "Current Version",
+        "message": latest_version,
+        "color": "61affe"
+    }
+    with REPO_DIR.joinpath("badge-version.json").open("w", encoding="utf-8") as badge_file:
+        json.dump(badge_data, badge_file, ensure_ascii=False, indent=2)
