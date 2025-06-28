@@ -350,17 +350,22 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                 }
                 name = buildString {
                     append("${item.order + 1}. ")
-                    if (item.chapterId != null && item.chapterId > 0) {
-                        if (item.chapterTitleName.isNullOrBlank()) {
-                            item.chapterNumber
-                                ?.takeIf { it.isNotBlank() && it != "-100000" }
-                                ?.let { append(" Chapter $it") }
+                    when {
+                        !item.chapterTitleName.isNullOrBlank() && !item.chapterTitleName.matches(Regex("^\\d+\$")) -> {
+                            append(item.chapterTitleName)
                         }
-                        item.chapterTitleName
-                            ?.takeIf { it.isNotBlank() }
-                            ?.let { append(it) }
-                    } else if (!item.volumeNumber.isNullOrBlank()) {
-                        append(" (Vol.${item.volumeNumber})")
+                        !item.volumeNumber.isNullOrBlank() && item.volumeNumber != "-100000" -> {
+                            append("Volume ${item.volumeNumber.padStart(2, '0')}")
+                        }
+                        !item.chapterNumber.isNullOrBlank() && item.chapterNumber != "-100000" -> {
+                            val libraryType = getLibraryType(item.seriesId)
+                            when (libraryType) {
+                                LibraryTypeEnum.Comic, LibraryTypeEnum.ComicVine ->
+                                    append("Issue #${item.chapterNumber.padStart(3, '0')}")
+                                else ->
+                                    append("Chapter ${item.chapterNumber.padStart(2, '0')}")
+                            }
+                        }
                     }
                 }
                 date_upload = if (preferences.RdDate && !item.releaseDate.isNullOrBlank()) {
@@ -369,7 +374,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                     0L // Explicitly unset the date
                 }
                 chapter_number = item.order.toFloat()
-                scanlator = item.seriesName + " #" + (item.chapterNumber?.padStart(3, '0') ?: "") // For Comics #000
+                scanlator = item.seriesName
             }
         }.sortedBy { it.chapter_number }
     }

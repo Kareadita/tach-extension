@@ -1,23 +1,32 @@
-| Build                                                                                                                                                                              | Up to date                                                                                                                                                                                                                                        | Install to app                                                                                                                                                                                                                                                                 |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [![Build](https://github.com/Kareadita/tach-extensions/actions/workflows/build_push.yml/badge.svg)](https://github.com/Kareadita/tach-extensions/actions/workflows/build_push.yml) | [![Updated](https://img.shields.io/github/actions/workflow/status/Kareadita/tachiyomi-extensions/auto_cherry_pick.yml?label=Updated&labelColor=27303D)](https://github.com/Kareadita/tachiyomi-extensions/actions/workflows/auto_cherry_pick.yml) | [![Install](https://img.shields.io/badge/Click%20here%20to%20install%20repo-gray?style=flat&labelColor=red)](https://intradeus.github.io/http-protocol-redirector/?r=tachiyomi://add-repo?url=https://raw.githubusercontent.com/Kareadita/tach-extensions/repo/index.min.json) |
+<p align="center">
+  <a href="https://github.com/Kareadita/tach-extensions/actions/workflows/build_push.yml">
+    <img alt="Build Status" src="https://img.shields.io/github/actions/workflow/status/Kareadita/tach-extensions/build_push.yml?label=Build&style=for-the-badge">
+  </a>
+  <a href="https://github.com/Kareadita/tach-extensions/releases/latest">
+    <img alt="Current Version" src="https://img.shields.io/github/v/release/Kareadita/tach-extensions?label=Current%20Version&style=for-the-badge&color=5A4FCF&labelColor=5A4FCF">
+  </a>
+  <a href="https://intradeus.github.io/http-protocol-redirector/?r=tachiyomi://add-repo?url=https://raw.githubusercontent.com/Kareadita/tach-extensions/repo/index.min.json">
+    <img alt="Install Kavita Extension" src="https://img.shields.io/badge/Install%20Kavita%20Extension-49CC90?style=for-the-badge&logo=cloudsmith&logoColor=white&labelColor=49CC90&color=49CC90">
+  </a>
+</p>
 
 # Kavita Extension
 
-This repository contains the Kavita extension which is compatible with [Komikku](https://github.com/komikku-app/komikku) and Mihon / Tachiyomi or other forks.
+This repository contains the Kavita extension, compatible with [Komikku](https://github.com/komikku-app/komikku), [Mihon](https://github.com/mihonapp/mihon), Tachiyomi, and other forks.
 
-## Recommend App
+## Recommended Apps
 
-### [Mihon](https://github.com/mihonapp/mihon)
+### - [Mihon](https://github.com/mihonapp/mihon)
 
-### [Komikku](https://github.com/komikku-app/komikku)
+### - [Komikku](https://github.com/komikku-app/komikku)
 
 ## How to add the repo
 
-[![Install](https://img.shields.io/badge/Click%20here%20to%20install%20repo-gray?style=flat&labelColor=red)](https://intradeus.github.io/http-protocol-redirector/?r=tachiyomi://add-repo?url=https://raw.githubusercontent.com/Kareadita/tach-extensions/repo/index.min.json)
-Otherwise, copy & paste the following URL:
+[![Install](https://img.shields.io/badge/Install%20Kavita%20Extension-49CC90?style=for-the-badge&logo=cloudsmith&logoColor=white&labelColor=49CC90&color=49CC90)](https://intradeus.github.io/http-protocol-redirector/?r=tachiyomi://add-repo?url=https://raw.githubusercontent.com/Kareadita/tach-extensions/repo/index.min.json)
 
-```html
+Or copy & paste this URL into your app:
+
+```
 https://raw.githubusercontent.com/Kareadita/tach-extensions/repo/index.min.json
 ```
 
@@ -60,7 +69,6 @@ limitations under the License.
 
 This project does not have any affiliation with the content providers available.
 
-This project is not affiliated with Komikku/Mihon/Tachiyomi. Don't ask for help about these extensions at the
-official support means of Komikku/Mihon/Tachiyomi. All credits to the codebase goes to the original contributors.
+This project is not affiliated with Komikku/Mihon/Tachiyomi. Don't ask for help about these extensions at the official support means of Komikku/Mihon/Tachiyomi. All credits to the codebase goes to the original contributors.
 
 The developer of this application does not have any affiliation with the content providers available.

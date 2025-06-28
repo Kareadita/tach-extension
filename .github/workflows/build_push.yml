@@ -63,7 +63,7 @@ jobs:
       - id: generate-matrices
         name: Create output matrices
         run: |
-          python ./.github/scripts/generate-build-matrices.py ${{ steps.last_successful_ci_commit.outputs.base }} Release
+          echo "matrix={\"chunk\":[{\"number\":1,\"modules\":[\"src:all:kavita:assembleRelease\"]}]}" >> $GITHUB_OUTPUT
 
   build:
     name: Build extensions (${{ matrix.chunk.number }})
@@ -89,7 +89,10 @@ jobs:
 
       - name: Prepare signing key
         run: |
-          echo ${{ secrets.SIGNING_KEY }} | base64 -d > signingkey.jks
+          echo "${{ secrets.SIGNING_KEY }}" | base64 -di > signingkey.jks
+          # Verify key is properly created
+          ls -la signingkey.jks
+          keytool -list -v -keystore signingkey.jks -storepass "${{ secrets.KEY_STORE_PASSWORD }}" -alias "${{ secrets.ALIAS }}" || exit 1
 
       - name: Build extensions (${{ matrix.chunk.number }})
         env:
@@ -146,7 +149,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: Kareadita/tach-extension
-          token: ${{ secrets.BOT_PAT }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           ref: repo
           path: repo
 
