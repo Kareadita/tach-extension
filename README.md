@@ -1,7 +1,7 @@
 <p align="center">
+
 <a href="https://github.com/Kareadita/tach-extensions/actions/workflows/build_push.yml">
-    <img alt="Build Status" src="https://img.shields.io/github/actions/workflow/status/Kareadita/tach-extensions/build_push.yml?label=Build&style=for-the-badge">
-</a>
+<img alt="Build Status" src="https://img.shields.io/github/actions/workflow/status/Kareadita/tach-extensions/build_push.yml?label=Build&style=for-the-badge"></a>
 
 <img alt="Current Version" src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Kareadita/tach-extension/refs/heads/repo/badge-version.json&style=for-the-badge&color=61affe&label=Current%20Version">
 
