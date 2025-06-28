@@ -96,10 +96,9 @@ jobs:
 
       - name: Build extensions (${{ matrix.chunk.number }})
         env:
-          ORG_GRADLE_PROJECT_storeFile: signingkey.jks
-          ORG_GRADLE_PROJECT_storePassword: ${{ secrets.KEY_STORE_PASSWORD }}
-          ORG_GRADLE_PROJECT_keyAlias: ${{ secrets.ALIAS }}
-          ORG_GRADLE_PROJECT_keyPassword: ${{ secrets.KEY_PASSWORD }}
+          ALIAS: ${{ secrets.ALIAS }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           ./gradlew $(echo '${{ toJson(matrix.chunk.modules) }}' | jq -r 'join(" ")')
 
