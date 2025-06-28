@@ -63,7 +63,7 @@ jobs:
       - id: generate-matrices
         name: Create output matrices
         run: |
-          echo "matrix={\"chunk\":[{\"number\":1,\"modules\":[\"src:all:kavita:assembleRelease\"]}]}" >> $GITHUB_OUTPUT
+          python ./.github/scripts/generate-build-matrices.py ${{ steps.last_successful_ci_commit.outputs.base }} Release
 
   build:
     name: Build extensions (${{ matrix.chunk.number }})
