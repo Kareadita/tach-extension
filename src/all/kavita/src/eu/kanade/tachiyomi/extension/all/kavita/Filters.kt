@@ -3,18 +3,25 @@ package eu.kanade.tachiyomi.extension.all.kavita
 import eu.kanade.tachiyomi.extension.all.kavita.KavitaConstants.noSmartFilterSelected
 import eu.kanade.tachiyomi.source.model.Filter
 
-class UserRating :
-    Filter.Select<String>(
-        "Minimum Rating",
-        arrayOf(
-            "Any",
-            "1 star",
-            "2 stars",
-            "3 stars",
-            "4 stars",
-            "5 stars",
-        ),
-    )
+class UserRating : Filter.Select<Int>(
+    "Minimum Rating",
+    arrayOf(
+        "Any",
+        "1 star",
+        "2 stars",
+        "3 stars",
+        "4 stars",
+        "5 stars",
+    ).mapIndexed { index, _ -> index }.toTypedArray(),
+) {
+    override fun toString(): String {
+        return when (state) {
+            0 -> "Any"
+            else -> "$state star${if (state > 1) "s" else ""}"
+        }
+    }
+}
+
 class SmartFiltersFilter(smartFilters: Array<String>) :
     Filter.Select<String>("Smart Filters", arrayOf(noSmartFilterSelected) + smartFilters)
 class SortFilter(sortables: Array<String>) : Filter.Sort("Sort by", sortables, Selection(0, true))
@@ -26,15 +33,27 @@ val sortableList = listOf(
     Pair("Item added", 4),
     Pair("Time to Read", 5),
     Pair("Release year", 6),
+    Pair("Read Progress", 7),
+    Pair("Average Rating", 8),
+    Pair("Random", 9),
 )
 
+class SpecialListFilter : Filter.Select<String>(
+    "Special Lists",
+    arrayOf("None", "Want to Read", "Reading Lists"),
+)
+
+// Use Filter.CheckBox directly for status
 class StatusFilter(name: String) : Filter.CheckBox(name, false)
 class StatusFilterGroup(filters: List<StatusFilter>) :
     Filter.Group<StatusFilter>("Status", filters)
 
-class ReleaseYearRange(name: String) : Filter.Text(name)
+// Use Filter.Text directly for release year range
+class ReleaseYearRange(name: String) : Filter.Text(name, "")
 class ReleaseYearRangeGroup(filters: List<ReleaseYearRange>) :
     Filter.Group<ReleaseYearRange>("Release Year", filters)
+
+// Use Filter.TriState for genres/tags/age ratings/collections/languages/libraries
 class GenreFilter(name: String) : Filter.TriState(name)
 class GenreFilterGroup(genres: List<GenreFilter>) :
     Filter.Group<GenreFilter>("Genres", genres)
