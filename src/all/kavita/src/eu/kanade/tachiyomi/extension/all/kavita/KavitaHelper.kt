@@ -164,15 +164,23 @@ class KavitaHelper {
 // //            }
 
             chapter_number = when {
-                type == ChapterType.SingleFileVolume && singleFileVolumeNumber != null -> singleFileVolumeNumber.toFloat()
-                type != ChapterType.SingleFileVolume -> chapter.number.toFloatOrNull() ?: 0f
-                else -> 0f
-            }
-
-            url = when {
+                // If this is a SingleFileVolume and we have an explicit number (from single-file processing)
                 type == ChapterType.SingleFileVolume && singleFileVolumeNumber != null ->
-                    "volume_${volume.id}"
-                else -> chapter.id.toString()
+                    singleFileVolumeNumber.toFloat()
+
+                // If this is a regular chapter (not a volume)
+                type != ChapterType.SingleFileVolume ->
+                    chapter.number.toFloatOrNull() ?: 0f
+
+                // For volumes in mixed content, place them below chapter 0
+                else -> {
+                    val volumeNum = try {
+                        volume.number.toString().toFloatOrNull() ?: 0f
+                    } catch (e: NumberFormatException) {
+                        0f
+                    }
+                    -volumeNum - 100000f
+                }
             }
 
             //            url = chapter.id.toString()

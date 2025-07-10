@@ -7,7 +7,6 @@ import android.text.InputType
 import android.util.Log
 import android.widget.Toast
 import androidx.preference.EditTextPreference
-import androidx.preference.MultiSelectListPreference
 import androidx.preference.SwitchPreferenceCompat
 import eu.kanade.tachiyomi.AppInfo
 import eu.kanade.tachiyomi.extension.all.kavita.dto.AuthenticationDto
@@ -1265,27 +1264,49 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             val seriesId = response.request.url.queryParameter("seriesId")?.toIntOrNull()
             val libraryType = seriesId?.let { getLibraryType(it) }
             val volumes = response.parseAs<List<VolumeDto>>()
-            val allChapters = mutableListOf<SChapter>()
+            val chapters = mutableListOf<SChapter>()
+            val volumeItems = mutableListOf<SChapter>()
+
+            // First determine the content type
+            val hasChapters = volumes.any { volume ->
+                volume.chapters.any { chapter ->
+                    ChapterType.of(chapter, volume, libraryType) != ChapterType.SingleFileVolume
+                }
+            }
+            val hasVolumes = volumes.any { volume ->
+                volume.chapters.any { chapter ->
+                    ChapterType.of(chapter, volume, libraryType) == ChapterType.SingleFileVolume
+                }
+            }
 
             volumes.forEach { volume ->
                 volume.chapters.forEach { chapter ->
                     val sChapter = helper.chapterFromVolume(chapter, volume, libraryType = libraryType)
-                    allChapters.add(sChapter)
+                    when (ChapterType.of(chapter, volume, libraryType)) {
+                        ChapterType.SingleFileVolume -> volumeItems.add(sChapter)
+                        else -> chapters.add(sChapter)
+                    }
                 }
             }
 
-            // Handle single-file volumes by assigning sequential numbers
-            if (allChapters.all { it.scanlator == "Volume" }) {
-                return allChapters.mapIndexed { idx, chapter ->
-                    chapter.apply {
-                        chapter_number = (idx + 1).toFloat()
-                    }
-                }.sortedByDescending { it.chapter_number }
-            }
+            return when {
+                // Case 1: Only chapters
+                hasChapters && !hasVolumes -> chapters.sortedByDescending { it.chapter_number }
 
-            return allChapters.sortedByDescending { it.chapter_number }
+                // Case 2: Only volumes (treat as chapters)
+                !hasChapters && hasVolumes -> volumeItems.sortedByDescending { it.chapter_number }
+
+                // Case 3: Mixed content
+                else -> {
+                    // Chapters first (sorted descending)
+                    val sortedChapters = chapters.sortedByDescending { it.chapter_number }
+                    // Volumes after (sorted descending with negative numbers)
+                    val sortedVolumes = volumeItems.sortedByDescending { it.chapter_number }
+                    sortedChapters + sortedVolumes
+                }
+            }
         } catch (e: Exception) {
-            Log.e(LOG_TAG, "Unhandled exception parsing chapters. Send logs to kavita devs", e)
+            Log.e(LOG_TAG, "Unhandled exception parsing chapters", e)
             throw IOException(helper.intl["version_exceptions_chapters_parse"])
         }
     }
@@ -1472,99 +1493,99 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
     /**
      * Loads the enabled filters if they are not empty so tachiyomi can show them to the user
      */
-    override fun getFilterList(): FilterList {
-        val toggledFilters = getToggledFilters()
-
-        val filters = try {
-            val filtersLoaded = mutableListOf<Filter<*>>()
-
-            filtersLoaded.add(SortFilter(sortableList.map { it.first }.toTypedArray()))
-
-            if (smartFilters.isNotEmpty()) {
-                filtersLoaded.add(SmartFiltersFilter(smartFilters.map { it.name }.toTypedArray()))
-            }
-
-            filtersLoaded.add(SpecialListFilter())
-
-            if (toggledFilters.contains("Read Status")) {
-                filtersLoaded.add(
-                    StatusFilterGroup(
-                        listOf(
-                            "notRead",
-                            "inProgress",
-                            "read",
-                        ).map { StatusFilter(it) },
-                    ),
-                )
-            }
-            if (toggledFilters.contains("ReleaseYearRange")) {
-                filtersLoaded.add(
-                    ReleaseYearRangeGroup(
-                        listOf("Min", "Max").map { ReleaseYearRange(it) },
-                    ),
-                )
-            }
-
-            if (genresListMeta.isNotEmpty() and toggledFilters.contains("Genres")) {
-                filtersLoaded.add(
-                    GenreFilterGroup(genresListMeta.map { GenreFilter(it.title) }),
-                )
-            }
-            if (tagsListMeta.isNotEmpty() and toggledFilters.contains("Tags")) {
-                filtersLoaded.add(
-                    TagFilterGroup(tagsListMeta.map { TagFilter(it.title) }),
-                )
-            }
-            if (ageRatingsListMeta.isNotEmpty() and toggledFilters.contains("Age Rating")) {
-                filtersLoaded.add(
-                    AgeRatingFilterGroup(ageRatingsListMeta.map { AgeRatingFilter(it.title) }),
-                )
-            }
-            if (toggledFilters.contains("Format")) {
-                filtersLoaded.add(
-                    FormatsFilterGroup(
-                        listOf(
-                            "Image",
-                            "Archive",
-                            "Pdf",
-                            "Unknown",
-                        ).map { FormatFilter(it) },
-                    ),
-                )
-            }
-            if (collectionsListMeta.isNotEmpty() and toggledFilters.contains("Collections")) {
-                filtersLoaded.add(
-                    CollectionFilterGroup(collectionsListMeta.map { CollectionFilter(it.title) }),
-                )
-            }
-            if (languagesListMeta.isNotEmpty() and toggledFilters.contains("Languages")) {
-                filtersLoaded.add(
-                    LanguageFilterGroup(languagesListMeta.map { LanguageFilter(it.title) }),
-                )
-            }
-            if (libraryListMeta.isNotEmpty() and toggledFilters.contains("Libraries")) {
-                filtersLoaded.add(
-                    LibrariesFilterGroup(libraryListMeta.map { LibraryFilter(it.name) }),
-                )
-            }
-            if (pubStatusListMeta.isNotEmpty() and toggledFilters.contains("Publication Status")) {
-                filtersLoaded.add(
-                    PubStatusFilterGroup(pubStatusListMeta.map { PubStatusFilter(it.title) }),
-                )
-            }
-            if (pubStatusListMeta.isNotEmpty() and toggledFilters.contains("Rating")) {
-                filtersLoaded.add(
-                    UserRating(),
-                )
-            }
-
-            filtersLoaded
-        } catch (e: Exception) {
-            Log.e(LOG_TAG, "[FILTERS] Error while creating filter list", e)
-            FilterList(emptyList())
-        }
-        return FilterList(filters)
-    }
+//    override fun getFilterList(): FilterList {
+//        val toggledFilters = getToggledFilters()
+//
+//        val filters = try {
+//            val filtersLoaded = mutableListOf<Filter<*>>()
+//
+//            filtersLoaded.add(SortFilter(sortableList.map { it.first }.toTypedArray()))
+//
+//            if (smartFilters.isNotEmpty()) {
+//                filtersLoaded.add(SmartFiltersFilter(smartFilters.map { it.name }.toTypedArray()))
+//            }
+//
+//            filtersLoaded.add(SpecialListFilter())
+//
+//            if (toggledFilters.contains("Read Status")) {
+//                filtersLoaded.add(
+//                    StatusFilterGroup(
+//                        listOf(
+//                            "notRead",
+//                            "inProgress",
+//                            "read",
+//                        ).map { StatusFilter(it) },
+//                    ),
+//                )
+//            }
+//            if (toggledFilters.contains("ReleaseYearRange")) {
+//                filtersLoaded.add(
+//                    ReleaseYearRangeGroup(
+//                        listOf("Min", "Max").map { ReleaseYearRange(it) },
+//                    ),
+//                )
+//            }
+//
+//            if (genresListMeta.isNotEmpty() and toggledFilters.contains("Genres")) {
+//                filtersLoaded.add(
+//                    GenreFilterGroup(genresListMeta.map { GenreFilter(it.title) }),
+//                )
+//            }
+//            if (tagsListMeta.isNotEmpty() and toggledFilters.contains("Tags")) {
+//                filtersLoaded.add(
+//                    TagFilterGroup(tagsListMeta.map { TagFilter(it.title) }),
+//                )
+//            }
+//            if (ageRatingsListMeta.isNotEmpty() and toggledFilters.contains("Age Rating")) {
+//                filtersLoaded.add(
+//                    AgeRatingFilterGroup(ageRatingsListMeta.map { AgeRatingFilter(it.title) }),
+//                )
+//            }
+//            if (toggledFilters.contains("Format")) {
+//                filtersLoaded.add(
+//                    FormatsFilterGroup(
+//                        listOf(
+//                            "Image",
+//                            "Archive",
+//                            "Pdf",
+//                            "Unknown",
+//                        ).map { FormatFilter(it) },
+//                    ),
+//                )
+//            }
+//            if (collectionsListMeta.isNotEmpty() and toggledFilters.contains("Collections")) {
+//                filtersLoaded.add(
+//                    CollectionFilterGroup(collectionsListMeta.map { CollectionFilter(it.title) }),
+//                )
+//            }
+//            if (languagesListMeta.isNotEmpty() and toggledFilters.contains("Languages")) {
+//                filtersLoaded.add(
+//                    LanguageFilterGroup(languagesListMeta.map { LanguageFilter(it.title) }),
+//                )
+//            }
+//            if (libraryListMeta.isNotEmpty() and toggledFilters.contains("Libraries")) {
+//                filtersLoaded.add(
+//                    LibrariesFilterGroup(libraryListMeta.map { LibraryFilter(it.name) }),
+//                )
+//            }
+//            if (pubStatusListMeta.isNotEmpty() and toggledFilters.contains("Publication Status")) {
+//                filtersLoaded.add(
+//                    PubStatusFilterGroup(pubStatusListMeta.map { PubStatusFilter(it.title) }),
+//                )
+//            }
+//            if (pubStatusListMeta.isNotEmpty() and toggledFilters.contains("Rating")) {
+//                filtersLoaded.add(
+//                    UserRating(),
+//                )
+//            }
+//
+//            filtersLoaded
+//        } catch (e: Exception) {
+//            Log.e(LOG_TAG, "[FILTERS] Error while creating filter list", e)
+//            FilterList(emptyList())
+//        }
+//        return FilterList(filters)
+//    }
 
     class LoginErrorException(message: String? = null, cause: Throwable? = null) : Exception(message, cause) {
         constructor(cause: Throwable) : this(null, cause)
@@ -1608,21 +1629,21 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             helper.intl["pref_opds_summary"],
         )
 
-        val enabledFiltersPref = MultiSelectListPreference(screen.context).apply {
-            key = KavitaConstants.toggledFiltersPref
-            title = helper.intl["pref_filters_title"]
-            summary = helper.intl["pref_filters_summary"]
-            entries = KavitaConstants.filterPrefEntries
-            entryValues = KavitaConstants.filterPrefEntriesValue
-            setDefaultValue(KavitaConstants.defaultFilterPrefEntries)
-            setOnPreferenceChangeListener { _, newValue ->
-                @Suppress("UNCHECKED_CAST")
-                val checkValue = newValue as Set<String>
-                preferences.edit()
-                    .putStringSet(KavitaConstants.toggledFiltersPref, checkValue)
-                    .commit()
-            }
-        }
+//        val enabledFiltersPref = MultiSelectListPreference(screen.context).apply {
+//            key = KavitaConstants.toggledFiltersPref
+//            title = helper.intl["pref_filters_title"]
+//            summary = helper.intl["pref_filters_summary"]
+//            entries = KavitaConstants.filterPrefEntries
+//            entryValues = KavitaConstants.filterPrefEntriesValue
+//            setDefaultValue(KavitaConstants.defaultFilterPrefEntries)
+//            setOnPreferenceChangeListener { _, newValue ->
+//                @Suppress("UNCHECKED_CAST")
+//                val checkValue = newValue as Set<String>
+//                preferences.edit()
+//                    .putStringSet(KavitaConstants.toggledFiltersPref, checkValue)
+//                    .commit()
+//            }
+//        }
         val customSourceNamePref = EditTextPreference(screen.context).apply {
             key = KavitaConstants.customSourceNamePref
             title = helper.intl["pref_customsource_title"]
@@ -1721,7 +1742,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             }
         }.also(screen::addPreference)
 
-        screen.addPreference(enabledFiltersPref)
+//        screen.addPreference(enabledFiltersPref)
     }
 
     private fun androidx.preference.PreferenceScreen.editTextPreference(
@@ -1783,7 +1804,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
     private fun getPrefBaseUrl(): String = preferences.getString("BASEURL", "")!!
     private fun getPrefApiUrl(): String = preferences.getString("APIURL", "")!!
     private fun getPrefKey(): String = preferences.getString("APIKEY", "")!!
-    private fun getToggledFilters() = preferences.getStringSet(KavitaConstants.toggledFiltersPref, KavitaConstants.defaultFilterPrefEntries)!!
+//    private fun getToggledFilters() = preferences.getStringSet(KavitaConstants.toggledFiltersPref, KavitaConstants.defaultFilterPrefEntries)!!
 
     private val SharedPreferences.score: Boolean
         get() = getBoolean(SCORE_PREF, SCORE_DEFAULT)
