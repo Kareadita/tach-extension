@@ -1,6 +1,5 @@
 package eu.kanade.tachiyomi.extension.all.kavita
 
-import android.util.Log
 import eu.kanade.tachiyomi.extension.all.kavita.dto.ChapterDto
 import eu.kanade.tachiyomi.extension.all.kavita.dto.ChapterType
 import eu.kanade.tachiyomi.extension.all.kavita.dto.LibraryTypeEnum
@@ -46,10 +45,10 @@ class KavitaHelper {
     fun getIdFromUrl(url: String): Int {
         return try {
             val id = url.substringAfterLast("/").toInt()
-            Log.d("KavitaHelper", "Extracted ID $id from URL: $url")
+//            Log.d("KavitaHelper", "Extracted ID $id from URL: $url")
             id
         } catch (e: Exception) {
-            Log.e("KavitaHelper", "Failed to extract ID from URL: $url", e)
+//            Log.e("KavitaHelper", "Failed to extract ID from URL: $url", e)
             -1
         }
     }
@@ -65,43 +64,11 @@ class KavitaHelper {
 
     fun createSeriesDto(obj: SeriesDto, baseUrl: String, apiUrl: String, apiKey: String): SManga =
         SManga.create().apply {
-            // url = "$baseUrl/library/${obj.libraryId}/series/${obj.id}"
+//             url = "$baseUrl/library/${obj.libraryId}/series/${obj.id}"
             url = "$baseUrl/Series/${obj.id}"
             title = obj.name
             thumbnail_url = "$baseUrl/image/series-cover?seriesId=${obj.id}&apiKey=$apiKey"
-
-            // Set status based on read progress
-            status = when {
-                obj.pagesRead >= obj.pages -> SManga.COMPLETED
-                obj.pagesRead > 0 -> SManga.ONGOING
-                else -> SManga.UNKNOWN
-            }
         }
-
-//    class CompareChapters {
-//        companion object : Comparator<SChapter> {
-//            override fun compare(a: SChapter, b: SChapter): Int {
-//                if (a.chapter_number < 1.0 && b.chapter_number < 1.0) {
-//                    // Both are volumes, multiply by 100 and do normal sort
-//                    return if ((a.chapter_number * 100) < (b.chapter_number * 100)) {
-//                        1
-//                    } else {
-//                        -1
-//                    }
-//                } else {
-//                    if (a.chapter_number < 1.0 && b.chapter_number >= 1.0) {
-//                        // A is volume, b is not. A should sort first
-//                        return 1
-//                    } else if (a.chapter_number >= 1.0 && b.chapter_number < 1.0) {
-//                        return -1
-//                    }
-//                }
-//                if (a.chapter_number < b.chapter_number) return 1
-//                if (a.chapter_number > b.chapter_number) return -1
-//                return 0
-//            }
-//        }
-//    }
 
     fun chapterFromVolume(chapter: ChapterDto, volume: VolumeDto, singleFileVolumeNumber: Int? = null, libraryType: LibraryTypeEnum? = null): SChapter =
         SChapter.create().apply {
@@ -153,16 +120,6 @@ class KavitaHelper {
                 }
             }
 
-//            chapter_number = try {
-// //                if (type == ChapterType.SingleFileVolume) {
-// //                    volume.number.toFloat() / 10000
-// //                } else {
-// //                    chapter.number.toFloatOrNull() ?: 0f
-// //                }
-// //            } catch (e: NumberFormatException) {
-// //                0f
-// //            }
-
             chapter_number = when {
                 // If this is a SingleFileVolume and we have an explicit number (from single-file processing)
                 type == ChapterType.SingleFileVolume && singleFileVolumeNumber != null ->
@@ -183,7 +140,11 @@ class KavitaHelper {
                 }
             }
 
-            //            url = chapter.id.toString()
+            url = when {
+                type == ChapterType.SingleFileVolume && singleFileVolumeNumber != null ->
+                    "volume_${volume.id}"
+                else -> chapter.id.toString()
+            }
 
             if (chapter.fileCount > 1) {
                 // salt/offset to recognize chapters with new merged part-chapters as new and hence unread

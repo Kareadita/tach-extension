@@ -239,6 +239,7 @@ data class ChapterDto(
     val titleName: String,
     val pagesRead: Int,
     val coverImageLocked: Boolean,
+    val coverImage: String,
     val volumeId: Int,
     val created: String,
     val lastModifiedUtc: String,

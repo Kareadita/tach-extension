@@ -163,7 +163,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             // Fallback - use original URL if we don't recognize the pattern
             else -> manga.url
         }.also { url ->
-            Log.d(LOG_TAG, "Generated webview URL: $url (tracking URL: ${manga.url})")
+//            Log.d(LOG_TAG, "Generated webview URL: $url (tracking URL: ${manga.url})")
         }
     }
 
@@ -1012,45 +1012,69 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
 
             manga.thumbnail_url = if (preferences.LastVolumeCover) {
                 try {
-                    try {
-                        Log.d(LOG_TAG, "Fetching volumes for series ${result.seriesId}")
-                        val volumesRequest = GET("$apiUrl/Series/volumes?seriesId=${result.seriesId}", headersBuilder().build())
-                        val volumes = client.newCall(volumesRequest).execute().parseAs<List<VolumeDto>>()
+                    Log.d(LOG_TAG, "Fetching volumes for series ${result.seriesId}")
+                    val seriesId = result.seriesId ?: 0
+                    val volumes = client.newCall(
+                        GET("$apiUrl/Series/volumes?seriesId=$seriesId", headersBuilder().build()),
+                    ).execute().parseAs<List<VolumeDto>>()
 
-                        Log.d(LOG_TAG, "Found ${volumes.size} volumes for series ${result.seriesId}")
+                    val libraryType = getLibraryType(seriesId)
+                    val isComicLibrary = libraryType == LibraryTypeEnum.Comic || libraryType == LibraryTypeEnum.ComicVine
 
-                        // Find all volumes that have SingleFileVolume chapters and valid covers
-                        val validVolumes = volumes.filter { volume ->
+                    val coverCandidates = mutableListOf<Triple<String, Boolean, Float>>()
+
+                    for (volume in volumes) {
+                        if (isComicLibrary && volume.number == -100000) {
+                            // Issue: use chapter covers
+                            for (chapter in volume.chapters) {
+                                if (!chapter.coverImage.isNullOrBlank()) {
+                                    val isUnread = chapter.pagesRead < chapter.pages
+                                    val sortKey = chapter.number.toFloatOrNull() ?: 0f
+                                    coverCandidates.add(
+                                        Triple(
+                                            "$apiUrl/Image/chapter-cover?chapterId=${chapter.id}&apiKey=$apiKey",
+                                            isUnread,
+                                            sortKey,
+                                        ),
+                                    )
+                                }
+                            }
+                        } else if (!isComicLibrary) {
+                            // Manga: use volume cover if it has a SingleFileVolume chapter
                             val hasSingleFile = volume.chapters.any { chapter ->
                                 ChapterType.of(chapter, volume) == ChapterType.SingleFileVolume
                             }
-                            val hasCover = volume.coverImage.isNotBlank()
-
-                            hasSingleFile && hasCover
+                            if (hasSingleFile && !volume.coverImage.isNullOrBlank()) {
+                                val isUnread = volume.pagesRead < volume.pages
+                                val volumeNumber = volume.number.toFloat()
+                                coverCandidates.add(
+                                    Triple(
+                                        "$apiUrl/Image/volume-cover?volumeId=${volume.id}&apiKey=$apiKey",
+                                        isUnread,
+                                        volumeNumber,
+                                    ),
+                                )
+                            }
                         }
-
-                        Log.d(LOG_TAG, "Found ${validVolumes.size} valid volumes with covers")
-
-                        // Get the last volume with a valid cover
-                        val lastValidVolume = validVolumes.maxByOrNull { it.number }
-                        Log.d(LOG_TAG, "Selected last volume: ${lastValidVolume?.number ?: "NONE"} (id=${lastValidVolume?.id ?: "NONE"})")
-
-                        if (lastValidVolume != null && lastValidVolume.id > 0) {
-                            "$apiUrl/Image/volume-cover?volumeId=${lastValidVolume.id}&apiKey=$apiKey"
-                        } else {
-                            "$apiUrl/image/series-cover?seriesId=${result.seriesId}&apiKey=$apiKey"
-                        }
-                    } catch (e: Exception) {
-                        Log.e(LOG_TAG, "Error fetching volumes for last cover", e)
-                        "$apiUrl/image/series-cover?seriesId=${result.seriesId}&apiKey=$apiKey"
                     }
+
+                    Log.d(LOG_TAG, "Found ${coverCandidates.size} cover candidates")
+
+                    // Prefer first unread (lowest number), else most recent (highest number)
+                    val targetCover = coverCandidates
+                        .filter { it.second }
+                        .minByOrNull { it.third }
+                        ?: coverCandidates.maxByOrNull { it.third }
+
+                    targetCover?.first ?: "$apiUrl/image/series-cover?seriesId=$seriesId&apiKey=$apiKey"
                 } catch (e: Exception) {
-                    Log.e(LOG_TAG, "Error fetching volumes for last cover", e)
-                    "$apiUrl/image/series-cover?seriesId=${result.seriesId}&apiKey=$apiKey"
+                    Log.e(LOG_TAG, "Error fetching volumes for cover selection", e)
+                    "$apiUrl/image/series-cover?seriesId=${result.seriesId ?: 0}&apiKey=$apiKey"
                 }
             } else {
-                "$apiUrl/image/series-cover?seriesId=${result.seriesId}&apiKey=$apiKey"
+                "$apiUrl/image/series-cover?seriesId=${result.seriesId ?: 0}&apiKey=$apiKey"
             }
+
             manga.status = when (result.publicationStatus) {
                 4 -> SManga.PUBLISHING_FINISHED
                 2 -> SManga.COMPLETED
