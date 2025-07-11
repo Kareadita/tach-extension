@@ -342,33 +342,30 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                     item.volumeId != null && item.volumeId > 0 ->
                         "/Volume/${item.volumeId}?readingListId=$readingListId&seriesId=${item.seriesId}&volumeId=${item.volumeId}"
                     else ->
-                        // Fallback: use both seriesId and order to distinguish
                         "/Series/${item.seriesId}?readingListId=$readingListId&seriesId=${item.seriesId}&order=${item.order}"
                 }
                 name = buildString {
                     append("${item.order + 1}. ")
                     when {
-                        !item.chapterTitleName.isNullOrBlank() && !item.chapterTitleName.matches(Regex("^\\d+$")) -> {
-                            append(item.chapterTitleName)
+                        item.volumeNumber != null && item.volumeNumber != KavitaConstants.UNNUMBERED_VOLUME_STR -> {
+                            append("Volume ${item.volumeNumber}")
                         }
-                        !item.volumeNumber.isNullOrBlank() && item.volumeNumber != UNNUMBERED_VOLUME_STR -> {
-                            append("Volume ${item.volumeNumber.padStart(2, '0')}")
-                        }
-                        !item.chapterNumber.isNullOrBlank() && item.chapterNumber != UNNUMBERED_VOLUME_STR -> {
+                        item.chapterNumber != null && item.chapterNumber != KavitaConstants.UNNUMBERED_VOLUME_STR -> {
                             val libraryType = getLibraryType(item.seriesId)
                             when (libraryType) {
-                                LibraryTypeEnum.Comic, LibraryTypeEnum.ComicVine ->
-                                    append("Issue #${item.chapterNumber.padStart(3, '0')}")
-                                else ->
-                                    append("Chapter ${item.chapterNumber.padStart(2, '0')}")
+                                LibraryTypeEnum.Comic, LibraryTypeEnum.ComicVine -> append("Issue #${item.chapterNumber}")
+                                else -> append("Chapter ${item.chapterNumber}")
                             }
+                        }
+                        else -> {
+                            append("Item ${item.order + 1}")
                         }
                     }
                 }
                 date_upload = if (preferences.RdDate && !item.releaseDate.isNullOrBlank()) {
                     parseDateSafe(item.releaseDate)
                 } else {
-                    0L // Explicitly unset the date
+                    0L
                 }
                 chapter_number = item.order.toFloat()
                 scanlator = item.seriesName
@@ -1021,7 +1018,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
 
                     for (volume in volumes) {
                         // Issue: use chapter covers
-                        if (isComicLibrary && volume.number == UNNUMBERED_VOLUME) {
+                        if (isComicLibrary && volume.number == KavitaConstants.UNNUMBERED_VOLUME) {
                             coverCandidates += volume.chapters
                                 .filterNot { it.coverImage.isNullOrBlank() }
                                 .map { chapter ->
@@ -1250,23 +1247,16 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             val chapters = mutableListOf<SChapter>()
             val volumeItems = mutableListOf<SChapter>()
 
-            // First determine the content type
-            val hasChapters = volumes.any { volume ->
-                volume.chapters.any { chapter ->
-                    ChapterType.of(chapter, volume, libraryType) != ChapterType.SingleFileVolume
-                }
-            }
-            val hasVolumes = volumes.any { volume ->
-                volume.chapters.any { chapter ->
-                    ChapterType.of(chapter, volume, libraryType) == ChapterType.SingleFileVolume
-                }
-            }
-
             volumes.forEach { volume ->
                 volume.chapters.forEach { chapter ->
                     val sChapter = helper.chapterFromVolume(chapter, volume, libraryType = libraryType)
                     when (ChapterType.of(chapter, volume, libraryType)) {
-                        ChapterType.SingleFileVolume -> volumeItems.add(sChapter)
+                        ChapterType.SingleFileVolume -> {
+                            // For Case 2, use positive volume numbers
+                            // For Case 3, use negative numbers
+                            sChapter.chapter_number = volume.number.toFloat()
+                            volumeItems.add(sChapter)
+                        }
                         else -> chapters.add(sChapter)
                     }
                 }
@@ -1274,17 +1264,19 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
 
             return when {
                 // Case 1: Only chapters
-                hasChapters && !hasVolumes -> chapters.sortedByDescending { it.chapter_number }
+                chapters.isNotEmpty() && volumeItems.isEmpty() ->
+                    chapters.sortedByDescending { it.chapter_number }
 
-                // Case 2: Only volumes (treat as chapters)
-                !hasChapters && hasVolumes -> volumeItems.sortedByDescending { it.chapter_number }
+                // Case 2: Only volumes - treat as chapters with positive numbers
+                volumeItems.isNotEmpty() && chapters.isEmpty() ->
+                    volumeItems.sortedByDescending { it.chapter_number }
 
-                // Case 3: Mixed content
+                // Case 3: Mixed content - chapters first, then volumes (as negative numbers)
                 else -> {
-                    // Chapters first (sorted descending)
+                    // Convert volume numbers to negative for proper sorting
+                    volumeItems.forEach { it.chapter_number = -it.chapter_number }
                     val sortedChapters = chapters.sortedByDescending { it.chapter_number }
-                    // Volumes after (sorted descending with negative numbers)
-                    val sortedVolumes = volumeItems.sortedByDescending { it.chapter_number }
+                    val sortedVolumes = volumeItems.sortedBy { it.chapter_number }
                     sortedChapters + sortedVolumes
                 }
             }
@@ -1846,9 +1838,6 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
     }
 
     companion object {
-        private const val UNNUMBERED_VOLUME = -100000
-        private const val UNNUMBERED_VOLUME_STR = "-100000"
-
         private const val ADDRESS_TITLE = "Address"
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaTypeOrNull()
 

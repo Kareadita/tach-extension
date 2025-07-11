@@ -2,6 +2,9 @@ package eu.kanade.tachiyomi.extension.all.kavita
 
 object KavitaConstants {
 
+    const val UNNUMBERED_VOLUME = -100000
+    const val UNNUMBERED_VOLUME_STR = "-100000"
+
     val PERSON_ROLES = listOf(
         "Writer", "Penciller", "Inker", "Colorist",
         "Letterer", "CoverArtist", "Editor",

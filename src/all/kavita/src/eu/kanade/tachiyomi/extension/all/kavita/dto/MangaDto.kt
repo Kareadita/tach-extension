@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.extension.all.kavita.dto
 
+import eu.kanade.tachiyomi.extension.all.kavita.KavitaConstants
 import eu.kanade.tachiyomi.source.model.SManga
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -202,27 +203,33 @@ data class VolumeDto(
 
 @Serializable
 enum class ChapterType {
-    Regular, // chapter with volume information
-    Chapter, // manga chapter without volume information
+    Regular, // Chapter with volume information
+    Chapter, // Chapter without volume information
     SingleFileVolume,
     Special,
     Issue, // For comics
     ;
 
     companion object {
+        private const val SPECIAL_NUMBER = 100_000
+        private const val UNNUMBERED_VOLUME_NUMBER = -100_000
+
         fun of(chapter: ChapterDto, volume: VolumeDto, libraryType: LibraryTypeEnum? = null): ChapterType =
             when {
-                volume.number == 100_000 -> Special
-                volume.number == -100_000 -> when (libraryType) {
+                // Special cases
+                volume.number == SPECIAL_NUMBER -> Special
+                volume.number == UNNUMBERED_VOLUME_NUMBER -> when (libraryType) {
                     LibraryTypeEnum.Comic, LibraryTypeEnum.ComicVine -> Issue
-                    LibraryTypeEnum.Manga, LibraryTypeEnum.LightNovel, LibraryTypeEnum.Book -> Chapter
-                    else -> Chapter // Default to Chapter for other types
+                    else -> Chapter
                 }
-                chapter.number == "-100000" -> SingleFileVolume
+                // Single file volumes
+                chapter.number == KavitaConstants.UNNUMBERED_VOLUME_STR -> SingleFileVolume
+                // Regular volumes
+                volume.number > 0 -> SingleFileVolume
+                // Everything else depends on library type
                 else -> when (libraryType) {
                     LibraryTypeEnum.Comic, LibraryTypeEnum.ComicVine -> Issue
-                    LibraryTypeEnum.Manga, LibraryTypeEnum.LightNovel, LibraryTypeEnum.Book -> Chapter
-                    else -> Regular
+                    else -> Chapter
                 }
             }
     }
