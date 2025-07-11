@@ -136,7 +136,7 @@ class KavitaHelper {
                     } catch (e: NumberFormatException) {
                         0f
                     }
-                    -volumeNum - 100000f
+                    -volumeNum - VOLUME_NUMBER_OFFSET
                 }
             }
 
@@ -174,4 +174,8 @@ class KavitaHelper {
             }
         },
     )
+
+    companion object {
+        private const val VOLUME_NUMBER_OFFSET = 100000f
+    }
 }

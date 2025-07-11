@@ -162,8 +162,6 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
 
             // Fallback - use original URL if we don't recognize the pattern
             else -> manga.url
-        }.also { url ->
-//            Log.d(LOG_TAG, "Generated webview URL: $url (tracking URL: ${manga.url})")
         }
     }
 
@@ -180,11 +178,10 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         return client.newCall(request)
             .asObservableSuccess()
             .onErrorResumeNext { throwable ->
-                // Get Http code
                 val field = throwable.javaClass.getDeclaredField("code")
-                field.isAccessible = true // Make the field accessible
+                field.isAccessible = true
                 try {
-                    var code = field.get(throwable) // Get the value of the code property
+                    var code = field.get(throwable)
                     Log.e(LOG_TAG, "Error fetching manga: ${throwable.message}", throwable)
                     if (code as Int !in intArrayOf(401, 201, 500)) {
                         code = 500
@@ -351,13 +348,13 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                 name = buildString {
                     append("${item.order + 1}. ")
                     when {
-                        !item.chapterTitleName.isNullOrBlank() && !item.chapterTitleName.matches(Regex("^\\d+\$")) -> {
+                        !item.chapterTitleName.isNullOrBlank() && !item.chapterTitleName.matches(Regex("^\\d+$")) -> {
                             append(item.chapterTitleName)
                         }
-                        !item.volumeNumber.isNullOrBlank() && item.volumeNumber != "-100000" -> {
+                        !item.volumeNumber.isNullOrBlank() && item.volumeNumber != UNNUMBERED_VOLUME_STR -> {
                             append("Volume ${item.volumeNumber.padStart(2, '0')}")
                         }
-                        !item.chapterNumber.isNullOrBlank() && item.chapterNumber != "-100000" -> {
+                        !item.chapterNumber.isNullOrBlank() && item.chapterNumber != UNNUMBERED_VOLUME_STR -> {
                             val libraryType = getLibraryType(item.seriesId)
                             when (libraryType) {
                                 LibraryTypeEnum.Comic, LibraryTypeEnum.ComicVine ->
@@ -905,7 +902,6 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                     }
                 } else {
                     manga.apply {
-//                        description = helper.intl["error_reading_list_not_found"]
                         initialized = true
                     }
                 }
@@ -1024,21 +1020,17 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                     val coverCandidates = mutableListOf<Triple<String, Boolean, Float>>()
 
                     for (volume in volumes) {
-                        if (isComicLibrary && volume.number == -100000) {
-                            // Issue: use chapter covers
-                            for (chapter in volume.chapters) {
-                                if (!chapter.coverImage.isNullOrBlank()) {
-                                    val isUnread = chapter.pagesRead < chapter.pages
-                                    val sortKey = chapter.number.toFloatOrNull() ?: 0f
-                                    coverCandidates.add(
-                                        Triple(
-                                            "$apiUrl/Image/chapter-cover?chapterId=${chapter.id}&apiKey=$apiKey",
-                                            isUnread,
-                                            sortKey,
-                                        ),
+                        // Issue: use chapter covers
+                        if (isComicLibrary && volume.number == UNNUMBERED_VOLUME) {
+                            coverCandidates += volume.chapters
+                                .filterNot { it.coverImage.isNullOrBlank() }
+                                .map { chapter ->
+                                    Triple(
+                                        "$apiUrl/Image/chapter-cover?chapterId=${chapter.id}&apiKey=$apiKey",
+                                        chapter.pagesRead < chapter.pages,
+                                        chapter.number.toFloatOrNull() ?: 0f,
                                     )
                                 }
-                            }
                         } else if (!isComicLibrary) {
                             // Manga: use volume cover if it has a SingleFileVolume chapter
                             val hasSingleFile = volume.chapters.any { chapter ->
@@ -1249,24 +1241,6 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             null
         }
     }
-
-//    override fun chapterListParse(response: Response): List<SChapter> {
-//        try {
-//            val volumes = response.parseAs<List<VolumeDto>>()
-//            val allChapterList = mutableListOf<SChapter>()
-//            volumes.forEach { volume ->
-//                // Add all chapters from each volume as individual SChapter
-//                volume.chapters.forEach { chapter ->
-//                    allChapterList.add(helper.chapterFromVolume(chapter, volume))
-//                }
-//            }
-//            allChapterList.sortWith(KavitaHelper.CompareChapters)
-//            return allChapterList
-//        } catch (e: Exception) {
-//            Log.e(LOG_TAG, "Unhandled exception parsing chapters. Send logs to kavita devs", e)
-//            throw IOException(helper.intl["version_exceptions_chapters_parse"])
-//        }
-//    }
 
     override fun chapterListParse(response: Response): List<SChapter> {
         try {
@@ -1872,6 +1846,9 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
     }
 
     companion object {
+        private const val UNNUMBERED_VOLUME = -100000
+        private const val UNNUMBERED_VOLUME_STR = "-100000"
+
         private const val ADDRESS_TITLE = "Address"
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaTypeOrNull()
 
