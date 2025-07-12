@@ -312,7 +312,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             filter.addStatement(
                 FilterComparison.NotContains,
                 FilterField.Formats,
-                KavitaConstants.EPUB,
+                MangaFormat.Epub.format.toString(),
             )
         }
 
@@ -335,7 +335,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             filter.addStatement(
                 FilterComparison.NotContains,
                 FilterField.Formats,
-                KavitaConstants.EPUB,
+                MangaFormat.Epub.format.toString(),
             )
         }
 
@@ -756,7 +756,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             filterV2.addStatement(
                 FilterComparison.NotContains,
                 FilterField.Formats,
-                KavitaConstants.EPUB,
+                MangaFormat.Epub.format.toString(),
             )
         }
         val payload = json.encodeToJsonElement(filterV2).toString()
