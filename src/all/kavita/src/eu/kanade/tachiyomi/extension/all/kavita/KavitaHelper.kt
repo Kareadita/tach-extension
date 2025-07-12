@@ -20,6 +20,8 @@ class KavitaHelper {
     val json = Json {
         isLenient = true
         ignoreUnknownKeys = true
+        coerceInputValues = true
+        explicitNulls = false
         allowSpecialFloatingPointValues = true
         useArrayPolymorphism = true
         prettyPrint = true
@@ -37,9 +39,9 @@ class KavitaHelper {
         var hasNextPage = false
         if (!paginationHeader.isNullOrEmpty()) {
             val paginationInfo = json.decodeFromString<PaginationInfo>(paginationHeader)
-            hasNextPage = paginationInfo.currentPage + 1 > paginationInfo.totalPages
+            hasNextPage = paginationInfo.currentPage + 1 < paginationInfo.totalPages
         }
-        return !hasNextPage
+        return hasNextPage
     }
 
     fun getIdFromUrl(url: String): Int {
@@ -73,6 +75,9 @@ class KavitaHelper {
     fun chapterFromVolume(chapter: ChapterDto, volume: VolumeDto, singleFileVolumeNumber: Int? = null, libraryType: LibraryTypeEnum? = null): SChapter =
         SChapter.create().apply {
             val type = ChapterType.of(chapter, volume, libraryType)
+            val titleName = chapter.titleName ?: ""
+            val title = chapter.title ?: ""
+            val range = chapter.range ?: ""
 
             name = when (type) {
                 ChapterType.Regular -> {
@@ -80,23 +85,20 @@ class KavitaHelper {
                         it.toString().padStart(2, '0')
                     } ?: chapter.number
                     when {
-                        chapter.titleName.isBlank() -> "Vol.${volume.number} Ch.$chapterNum"
-                        chapter.titleName.trim().matches(Regex("^\\d+$")) ->
-                            "Vol.${volume.number} Ch.${chapter.titleName.trim().padStart(2, '0')}"
-                        else -> "Vol.${volume.number} Ch.$chapterNum - ${chapter.titleName}"
+                        titleName.any { it.isLetter() } -> "$chapterNum - $titleName"
+                        else -> "Vol.${volume.minNumber} Ch.$chapterNum"
                     }
                 }
                 ChapterType.SingleFileVolume -> {
                     when {
-                        volume.name.isBlank() -> "Volume ${volume.number}"
-                        volume.name.trim().matches(Regex("^\\d+$")) -> "Volume ${volume.name.trim().toIntOrNull()?.toString() ?: volume.name.trim()}"
-                        else -> "${volume.number} - ${volume.name}"
+                        volume.name.any { it.isLetter() } -> "v${volume.minNumber} - ${volume.name}"
+                        else -> "Volume ${volume.minNumber}"
                     }
                 }
                 ChapterType.Special -> {
                     when {
-                        chapter.title.isNotBlank() -> chapter.title
-                        chapter.range.isNotBlank() -> chapter.range
+                        title.isNotBlank() -> title
+                        range.isNotBlank() -> range
                         else -> "Special"
                     }
                 }
@@ -105,9 +107,8 @@ class KavitaHelper {
                         it.toString().padStart(2, '0')
                     } ?: chapter.number
                     when {
-                        chapter.titleName.isBlank() -> "Chapter $chapterNum"
-                        chapter.titleName.trim().matches(Regex("^\\d+$")) -> "Chapter ${chapter.titleName.trim().padStart(2, '0')}"
-                        else -> "$chapterNum - ${chapter.titleName}"
+                        titleName.any { it.isLetter() } -> "$chapterNum - $titleName"
+                        else -> "Chapter $chapterNum"
                     }
                 }
                 ChapterType.Issue -> {
@@ -115,10 +116,7 @@ class KavitaHelper {
                         it.toString().padStart(3, '0')
                     } ?: chapter.number
                     when {
-                        chapter.titleName.isNotBlank() && !chapter.titleName.trim().matches(Regex("^\\d+$")) ->
-                            "#$issueNum ${chapter.titleName}"
-                        chapter.title.isNotBlank() && !chapter.title.trim().matches(Regex("^\\d+$")) ->
-                            "#$issueNum ${chapter.title}"
+                        titleName.any { it.isLetter() } -> "$titleName (#$issueNum)"
                         else -> "Issue #$issueNum"
                     }
                 }
@@ -128,13 +126,19 @@ class KavitaHelper {
                 type == ChapterType.SingleFileVolume && singleFileVolumeNumber != null ->
                     singleFileVolumeNumber.toFloat()
 
+                type == ChapterType.SingleFileVolume -> {
+                    // For standalone volumes, use positive numbers
+                    volume.minNumber.toFloat()
+                }
+
+                // If this is a regular chapter (not a volume)
                 type != ChapterType.SingleFileVolume ->
                     chapter.number.toFloatOrNull() ?: 0f
 
                 // For volumes in mixed content, place them below chapter 0
                 else -> {
                     val volumeNum = try {
-                        volume.number.toString().toFloatOrNull() ?: 0f
+                        volume.minNumber.toString().toFloatOrNull() ?: 0f
                     } catch (e: NumberFormatException) {
                         0f
                     }
@@ -149,7 +153,6 @@ class KavitaHelper {
             }
 
             if (chapter.fileCount > 1) {
-                // salt/offset to recognize chapters with new merged part-chapters as new and hence unread
                 chapter_number += 0.001f * chapter.fileCount
                 url = "${url}_${chapter.fileCount}"
             }
@@ -161,7 +164,6 @@ class KavitaHelper {
                 ChapterType.Issue -> "Issue"
                 ChapterType.Chapter -> "Chapter"
                 ChapterType.Regular -> "Chapter"
-                else -> "Chapter"
             }
         }
 
