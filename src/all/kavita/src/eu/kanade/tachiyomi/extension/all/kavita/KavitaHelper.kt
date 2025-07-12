@@ -76,16 +76,14 @@ class KavitaHelper {
 
             name = when (type) {
                 ChapterType.Regular -> {
-                    val volumeNum = volume.number.toString().toIntOrNull()?.let {
-                        it.toString().padStart(2, '0')
-                    } ?: volume.number.toString()
                     val chapterNum = chapter.number.toIntOrNull()?.let {
                         it.toString().padStart(2, '0')
                     } ?: chapter.number
                     when {
-                        chapter.titleName.isBlank() -> "Volume $volumeNum Chapter $chapterNum"
-                        chapter.titleName.trim().matches(Regex("^\\d+$")) -> "Volume $volumeNum Chapter ${chapter.titleName.trim().padStart(2, '0')}"
-                        else -> "Volume $volumeNum $chapterNum - ${chapter.titleName}"
+                        chapter.titleName.isBlank() -> "Vol.${volume.number} Ch.$chapterNum"
+                        chapter.titleName.trim().matches(Regex("^\\d+$")) ->
+                            "Vol.${volume.number} Ch.${chapter.titleName.trim().padStart(2, '0')}"
+                        else -> "Vol.${volume.number} Ch.$chapterNum - ${chapter.titleName}"
                     }
                 }
                 ChapterType.SingleFileVolume -> {
@@ -95,7 +93,13 @@ class KavitaHelper {
                         else -> "${volume.number} - ${volume.name}"
                     }
                 }
-                ChapterType.Special -> chapter.titleName.takeIf { it.isNotBlank() } ?: chapter.range
+                ChapterType.Special -> {
+                    when {
+                        chapter.title.isNotBlank() -> chapter.title
+                        chapter.range.isNotBlank() -> chapter.range
+                        else -> "Special"
+                    }
+                }
                 ChapterType.Chapter -> {
                     val chapterNum = chapter.number.toIntOrNull()?.let {
                         it.toString().padStart(2, '0')
@@ -121,11 +125,9 @@ class KavitaHelper {
             }
 
             chapter_number = when {
-                // If this is a SingleFileVolume and we have an explicit number (from single-file processing)
                 type == ChapterType.SingleFileVolume && singleFileVolumeNumber != null ->
                     singleFileVolumeNumber.toFloat()
 
-                // If this is a regular chapter (not a volume)
                 type != ChapterType.SingleFileVolume ->
                     chapter.number.toFloatOrNull() ?: 0f
 
@@ -159,6 +161,7 @@ class KavitaHelper {
                 ChapterType.Issue -> "Issue"
                 ChapterType.Chapter -> "Chapter"
                 ChapterType.Regular -> "Chapter"
+                else -> "Chapter"
             }
         }
 

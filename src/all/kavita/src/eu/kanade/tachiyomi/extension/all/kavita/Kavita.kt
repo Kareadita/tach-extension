@@ -618,38 +618,57 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                             }
                         }
                         is CollectionFilterGroup -> {
-                            filter.state.forEach { collectionFilter ->
-                                val collection = collectionsListMeta.find { it.title == (collectionFilter as Filter.TriState).name }
-                                collection?.let {
-                                    when (collectionFilter.state) {
-                                        STATE_INCLUDE -> filterV2.addStatement(
-                                            FilterComparison.Contains,
-                                            FilterField.CollectionTags,
-                                            collection.id.toString(),
-                                        )
-                                        STATE_EXCLUDE -> filterV2.addStatement(
-                                            FilterComparison.NotContains,
-                                            FilterField.CollectionTags,
-                                            collection.id.toString(),
-                                        )
-                                    }
+                            val included = filter.state
+                                .filter { it.state == STATE_INCLUDE }
+                                .mapNotNull { collectionFilter ->
+                                    collectionsListMeta.find { it.title == collectionFilter.name }?.id?.toString()
                                 }
+                            val excluded = filter.state
+                                .filter { it.state == STATE_EXCLUDE }
+                                .mapNotNull { collectionFilter ->
+                                    collectionsListMeta.find { it.title == collectionFilter.name }?.id?.toString()
+                                }
+
+                            if (included.isNotEmpty()) {
+                                filterV2.addStatement(
+                                    FilterComparison.Contains,
+                                    FilterField.CollectionTags,
+                                    included.joinToString(","),
+                                )
+                            }
+                            if (excluded.isNotEmpty()) {
+                                filterV2.addStatement(
+                                    FilterComparison.NotContains,
+                                    FilterField.CollectionTags,
+                                    excluded.joinToString(","),
+                                )
                             }
                         }
                         is LanguageFilterGroup -> {
-                            filter.state.forEach { languageFilter ->
-                                when ((languageFilter as Filter.TriState).state) {
-                                    STATE_INCLUDE -> filterV2.addStatement(
-                                        FilterComparison.Contains,
-                                        FilterField.Languages,
-                                        languageFilter.name,
-                                    )
-                                    STATE_EXCLUDE -> filterV2.addStatement(
-                                        FilterComparison.NotContains,
-                                        FilterField.Languages,
-                                        languageFilter.name,
-                                    )
+                            val included = filter.state
+                                .filter { it.state == STATE_INCLUDE }
+                                .mapNotNull { languageFilter ->
+                                    languagesListMeta?.find { it.title == languageFilter.name }?.isoCode
                                 }
+                            val excluded = filter.state
+                                .filter { it.state == STATE_EXCLUDE }
+                                .mapNotNull { languageFilter ->
+                                    languagesListMeta?.find { it.title == languageFilter.name }?.isoCode
+                                }
+
+                            if (included.isNotEmpty()) {
+                                filterV2.addStatement(
+                                    FilterComparison.Contains,
+                                    FilterField.Languages,
+                                    included.joinToString(","),
+                                )
+                            }
+                            if (excluded.isNotEmpty()) {
+                                filterV2.addStatement(
+                                    FilterComparison.NotContains,
+                                    FilterField.Languages,
+                                    excluded.joinToString(","),
+                                )
                             }
                         }
                         is LibrariesFilterGroup -> {

@@ -216,16 +216,17 @@ enum class ChapterType {
 
         fun of(chapter: ChapterDto, volume: VolumeDto, libraryType: LibraryTypeEnum? = null): ChapterType =
             when {
-                // Special cases
+                // Special
                 volume.number == SPECIAL_NUMBER -> Special
+                // Issue
                 volume.number == UNNUMBERED_VOLUME_NUMBER -> when (libraryType) {
                     LibraryTypeEnum.Comic, LibraryTypeEnum.ComicVine -> Issue
                     else -> Chapter
                 }
-                // Single file volumes
+                // SingleFileVolume
                 chapter.number == KavitaConstants.UNNUMBERED_VOLUME_STR -> SingleFileVolume
-                // Regular volumes
-                volume.number > 0 -> SingleFileVolume
+                // Regular
+                volume.number > 0 -> Regular
                 // Everything else depends on library type
                 else -> when (libraryType) {
                     LibraryTypeEnum.Comic, LibraryTypeEnum.ComicVine -> Issue
