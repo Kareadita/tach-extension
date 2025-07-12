@@ -312,7 +312,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             filter.addStatement(
                 FilterComparison.NotContains,
                 FilterField.Formats,
-                "3",
+                KavitaConstants.EPUB,
             )
         }
 
@@ -335,7 +335,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             filter.addStatement(
                 FilterComparison.NotContains,
                 FilterField.Formats,
-                "3",
+                KavitaConstants.EPUB,
             )
         }
 
@@ -756,7 +756,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             filterV2.addStatement(
                 FilterComparison.NotContains,
                 FilterField.Formats,
-                "3",
+                KavitaConstants.EPUB,
             )
         }
         val payload = json.encodeToJsonElement(filterV2).toString()
