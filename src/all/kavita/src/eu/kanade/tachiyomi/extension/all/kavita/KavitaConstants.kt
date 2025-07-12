@@ -2,6 +2,9 @@ package eu.kanade.tachiyomi.extension.all.kavita
 
 object KavitaConstants {
 
+    const val UNNUMBERED_VOLUME = -100000
+    const val UNNUMBERED_VOLUME_STR = "-100000"
+
     val PERSON_ROLES = listOf(
         "Writer", "Penciller", "Inker", "Colorist",
         "Letterer", "CoverArtist", "Editor",
@@ -23,18 +26,7 @@ object KavitaConstants {
         "Publication Status",
         "Rating",
         "Age Rating",
-        "Writers",
-        "Penciller",
-        "Inker",
-        "Colorist",
-        "Letterer",
-        "Cover Artist",
-        "Editor",
-        "Publisher",
-        "Character",
-        "Translators",
         "ReleaseYearRange",
-        "Average Rating",
         "Random",
         "Read Progress",
     )
@@ -51,18 +43,7 @@ object KavitaConstants {
         "Publication Status",
         "Rating",
         "Age Rating",
-        "Writers",
-        "Penciller",
-        "Inker",
-        "Colorist",
-        "Letterer",
-        "CoverArtist",
-        "Editor",
-        "Publisher",
-        "Character",
-        "Translators",
         "ReleaseYearRange",
-        "Average Rating",
         "Random",
         "Read Progress",
     )
@@ -79,18 +60,7 @@ object KavitaConstants {
         "Publication Status",
         "Rating",
         "Age Rating",
-        "Writers",
-        "Penciller",
-        "Inker",
-        "Colorist",
-        "Letterer",
-        "CoverArtist",
-        "Editor",
-        "Publisher",
-        "Character",
-        "Translators",
         "ReleaseYearRange",
-        "Average Rating",
         "Random",
         "Read Progress",
     )
