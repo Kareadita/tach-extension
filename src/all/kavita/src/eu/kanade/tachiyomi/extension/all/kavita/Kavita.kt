@@ -1596,7 +1596,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                     val chapterPages = (0 until chapterDto.pages).map { i ->
                         Page(
                             index = pageOffset + i,
-                            imageUrl = "$apiUrl/Reader/image?chapterId=${chapterDto.id}&page=$i&extractPdf=true&apiKey=$apiKey"
+                            imageUrl = "$apiUrl/Reader/image?chapterId=${chapterDto.id}&page=$i&extractPdf=true&apiKey=$apiKey",
                         )
                     }
                     pages.addAll(chapterPages)
@@ -1623,7 +1623,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                 val pages = (0 until chapterDetails.pages).map { i ->
                     Page(
                         index = i,
-                        imageUrl = "$apiUrl/Reader/image?chapterId=$chapterId&page=$i&extractPdf=true&apiKey=$apiKey"
+                        imageUrl = "$apiUrl/Reader/image?chapterId=$chapterId&page=$i&extractPdf=true&apiKey=$apiKey",
                     )
                 }
                 pages.toList()
@@ -1635,7 +1635,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             val pages = (0 until fallbackPageCount).map { i ->
                 Page(
                     index = i,
-                    imageUrl = "$apiUrl/Reader/image?chapterId=${chapter.url.substringBefore("_")}&page=$i&extractPdf=true&apiKey=$apiKey"
+                    imageUrl = "$apiUrl/Reader/image?chapterId=${chapter.url.substringBefore("_")}&page=$i&extractPdf=true&apiKey=$apiKey",
                 )
             }
             Observable.just(pages.toList())
