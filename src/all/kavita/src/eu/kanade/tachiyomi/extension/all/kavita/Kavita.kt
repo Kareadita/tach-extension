@@ -433,32 +433,36 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                 is Filter.Group<*> -> {
                     when (filter) {
                         is StatusFilterGroup -> {
-                            filter.state.forEach { statusFilter ->
-                                if ((statusFilter as Filter.CheckBox).state) {
-                                    when (statusFilter.name) {
-                                        "notRead" -> filterV2.addStatement(
+                            val statusFilter = filter.state.firstOrNull() as? StatusFilter
+                            statusFilter?.state?.let { selectedIndex ->
+                                when (selectedIndex) {
+                                    1 -> { // Unread (0%)
+                                        filterV2.addStatement(
                                             FilterComparison.Equal,
                                             FilterField.ReadProgress,
                                             "0",
                                         )
-                                        "inProgress" -> {
-                                            filterV2.addStatement(
-                                                FilterComparison.GreaterThan,
-                                                FilterField.ReadProgress,
-                                                "0",
-                                            )
-                                            filterV2.addStatement(
-                                                FilterComparison.LessThan,
-                                                FilterField.ReadProgress,
-                                                "100",
-                                            )
-                                        }
-                                        "read" -> filterV2.addStatement(
+                                    }
+                                    2 -> { // In Progress (1-99%)
+                                        filterV2.addStatement(
+                                            FilterComparison.GreaterThanEqual,
+                                            FilterField.ReadProgress,
+                                            "1",
+                                        )
+                                        filterV2.addStatement(
+                                            FilterComparison.LessThanEqual,
+                                            FilterField.ReadProgress,
+                                            "99",
+                                        )
+                                    }
+                                    3 -> { // Read (100%)
+                                        filterV2.addStatement(
                                             FilterComparison.Equal,
                                             FilterField.ReadProgress,
                                             "100",
                                         )
                                     }
+                                    // 0 is "Any" - no filter applied
                                 }
                             }
                         }
@@ -1422,7 +1426,8 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             } ?: false
 
             volumes.forEach { volume ->
-                if (volume.chapters.size == 1 && volume.name.isNotBlank() && volume.minNumber.toInt() != KavitaConstants.SPECIAL_NUMBER) {
+                // This fixes specials being parsed as volumes
+                if (volume.chapters.size == 1 && volume.minNumber.toInt() != KavitaConstants.SPECIAL_NUMBER) {
                     val chapter = volume.chapters.first()
                     val sChapter = helper.chapterFromVolume(
                         chapter,
@@ -1453,7 +1458,6 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                         if (type == ChapterType.SingleFileVolume) {
                             volumeItems.add(sChapter)
                         } else {
-                            sChapter.url = "/Chapter/${chapter.id}"
                             chapters.add(sChapter)
                         }
                     }
@@ -1461,13 +1465,17 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             }
 
             return when {
+                // Case 1: Only chapters
                 chapters.isNotEmpty() && volumeItems.isEmpty() ->
                     chapters.sortedByDescending { it.chapter_number }
 
+                // Case 2: Only volumes - treat as chapters with positive numbers
                 volumeItems.isNotEmpty() && chapters.isEmpty() ->
                     volumeItems.sortedByDescending { it.chapter_number }
 
+                // Case 3: Mixed content - chapters first, then volumes
                 else -> {
+                    // Convert volume numbers to negative for proper sorting
                     volumeItems.forEach { it.chapter_number = -it.chapter_number }
                     (
                         chapters.sortedByDescending { it.chapter_number } +
@@ -1569,10 +1577,22 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                 val volumeId = chapter.url.substringAfter("/Volume/").substringBefore("?").toIntOrNull()
                     ?: throw IOException("Invalid volume ID")
 
-                // Get all chapters & pages in this volume
+                // Get all pages in this volume
                 val volumeRequest = GET("$apiUrl/Volume/$volumeId", headersBuilder().build())
                 val volume = client.newCall(volumeRequest).execute().parseAs<VolumeDto>()
+                val matchingChapter = volume.chapters.firstOrNull() // or match a chapterId if available
+                    ?: throw IOException(helper.intl["error_no_chapters_found"])
+
                 val pages = mutableListOf<Page>()
+                for (i in 0 until matchingChapter.pages) {
+                    pages.add(
+                        Page(
+                            index = i,
+                            imageUrl = "$apiUrl/Reader/image?chapterId=${matchingChapter.id}&page=$i&extractPdf=true&apiKey=$apiKey",
+                        ),
+                    )
+                }
+
                 var pageOffset = 0
 
                 volume.chapters.sortedBy { it.number.toFloatOrNull() ?: 0f }.forEach { chapterDto ->
@@ -1616,6 +1636,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                 pages.toList()
             }
         }.onErrorResumeNext { error ->
+            // Fallback to using the scanlator field if we can't get chapter details
             Log.e(LOG_TAG, "Error fetching chapter details, using fallback", error)
             val fallbackPageCount = chapter.scanlator?.replace(" pages", "")?.toIntOrNull() ?: 1
             val pages = mutableListOf<Page>()
@@ -1686,15 +1707,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             filtersLoaded.add(SpecialListFilter())
 
             if (toggledFilters.contains("Read Status")) {
-                filtersLoaded.add(
-                    StatusFilterGroup(
-                        listOf(
-                            "notRead",
-                            "inProgress",
-                            "read",
-                        ).map { StatusFilter(it) },
-                    ),
-                )
+                filtersLoaded.add(StatusFilterGroup())
             }
             if (toggledFilters.contains("ReleaseYearRange")) {
                 filtersLoaded.add(

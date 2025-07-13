@@ -43,10 +43,15 @@ class SpecialListFilter : Filter.Select<String>(
     arrayOf("None", "Want to Read", "Reading Lists"),
 )
 
-// Use Filter.CheckBox directly for status
-class StatusFilter(name: String) : Filter.CheckBox(name, false)
-class StatusFilterGroup(filters: List<StatusFilter>) :
-    Filter.Group<StatusFilter>("Status", filters)
+class StatusFilter : Filter.Select<String>(
+    "Status",
+    arrayOf("Any", "Unread", "In Progress", "Read"),
+)
+
+class StatusFilterGroup : Filter.Group<StatusFilter>(
+    "Status",
+    listOf(StatusFilter()),
+)
 
 // Use Filter.Text directly for release year range
 class ReleaseYearRange(name: String) : Filter.Text(name, "")
