@@ -81,77 +81,85 @@ class KavitaHelper {
             val chapterLabel = if (isWebtoon) "Episode" else "Chapter"
             val volumeLabel = if (isWebtoon) "Season" else "Volume"
 
-            name = when (type) {
-                ChapterType.Regular -> {
-                    val chapterNum = formatChapterNumber(chapter)
-                    when {
-                        titleName.isNotBlank() && titleName.any { it.isLetter() } ->
-                            "$chapterNum - ${cleanChapterTitle(
-                                titleName,
-                                ChapterTitleContext(
-                                    mangaTitle = mangaTitle,
-                                    chapterNumber = chapterNum,
-                                    volumeName = volume.name.ifBlank { title },
-                                ),
-                            )}"
-                        else ->
-                            "$volumeLabel ${formatVolumeNumber(volume)} $chapterLabel $chapterNum"
+            if (titleName != null) {
+                name = when (type) {
+                    ChapterType.Regular -> {
+                        val chapterNum = formatChapterNumber(chapter)
+                        when {
+                            titleName.isNotBlank() && titleName.any { it.isLetter() } ->
+                                "$chapterNum - ${cleanChapterTitle(
+                                    titleName,
+                                    ChapterTitleContext(
+                                        mangaTitle = mangaTitle,
+                                        chapterNumber = chapterNum,
+                                        volumeName = volume.name.ifBlank { title },
+                                    ),
+                                )}"
+
+                            else ->
+                                "$volumeLabel ${formatVolumeNumber(volume)} $chapterLabel $chapterNum"
+                        }
                     }
-                }
-                ChapterType.SingleFileVolume -> {
-                    cleanChapterTitle(
-                        when {
-                            volume.name.any { it.isLetter() } -> "v${volume.minNumber} - ${volume.name}"
-                            else -> "Volume ${volume.minNumber}"
-                        },
-                        ChapterTitleContext(
-                            mangaTitle = mangaTitle,
-                            volumeName = volume.name,
-                        ),
-                    )
-                }
-                ChapterType.Special -> {
-                    cleanChapterTitle(
-                        when {
-                            title.isNotBlank() -> title
-                            range.isNotBlank() -> range
-                            else -> "Special"
-                        },
-                        ChapterTitleContext(
-                            mangaTitle = mangaTitle,
-                            volumeName = volume.name,
-                        ),
-                    )
-                }
-                ChapterType.Chapter -> {
-                    val chapterNum = formatChapterNumber(chapter)
-                    when {
-                        titleName.isNotBlank() && titleName.any { it.isLetter() } ->
-                            "$chapterNum - ${cleanChapterTitle(
-                                titleName,
-                                ChapterTitleContext(
-                                    mangaTitle = mangaTitle,
-                                    chapterNumber = chapterNum,
-                                    volumeName = volume.name,
-                                ),
-                            )}"
-                        else ->
-                            "$chapterLabel $chapterNum"
+
+                    ChapterType.SingleFileVolume -> {
+                        cleanChapterTitle(
+                            when {
+                                volume.name.any { it.isLetter() } -> "v${volume.minNumber} - ${volume.name}"
+                                else -> "Volume ${volume.minNumber}"
+                            },
+                            ChapterTitleContext(
+                                mangaTitle = mangaTitle,
+                                volumeName = volume.name,
+                            ),
+                        )
                     }
-                }
-                ChapterType.Issue -> {
-                    val issueNum = chapter.number.toIntOrNull()?.toString()?.padStart(3, '0') ?: chapter.number
-                    cleanChapterTitle(
+
+                    ChapterType.Special -> {
+                        cleanChapterTitle(
+                            when {
+                                title.isNotBlank() -> title
+                                range.isNotBlank() -> range
+                                else -> "Special"
+                            },
+                            ChapterTitleContext(
+                                mangaTitle = mangaTitle,
+                                volumeName = volume.name,
+                            ),
+                        )
+                    }
+
+                    ChapterType.Chapter -> {
+                        val chapterNum = formatChapterNumber(chapter)
                         when {
-                            titleName.any { it.isLetter() } -> "$titleName (#$issueNum)"
-                            else -> "Issue #$issueNum"
-                        },
-                        ChapterTitleContext(
-                            mangaTitle = mangaTitle,
-                            chapterNumber = issueNum,
-                            volumeName = volume.name,
-                        ),
-                    )
+                            titleName.isNotBlank() && titleName.any { it.isLetter() } ->
+                                "$chapterNum - ${cleanChapterTitle(
+                                    titleName,
+                                    ChapterTitleContext(
+                                        mangaTitle = mangaTitle,
+                                        chapterNumber = chapterNum,
+                                        volumeName = volume.name,
+                                    ),
+                                )}"
+
+                            else ->
+                                "$chapterLabel $chapterNum"
+                        }
+                    }
+
+                    ChapterType.Issue -> {
+                        val issueNum = chapter.number.toIntOrNull()?.toString()?.padStart(3, '0') ?: chapter.number
+                        cleanChapterTitle(
+                            when {
+                                titleName.any { it.isLetter() } -> "$titleName (#$issueNum)"
+                                else -> "Issue #$issueNum"
+                            },
+                            ChapterTitleContext(
+                                mangaTitle = mangaTitle,
+                                chapterNumber = issueNum,
+                                volumeName = volume.name,
+                            ),
+                        )
+                    }
                 }
             }
 

@@ -246,7 +246,7 @@ data class ChapterDto(
     val pages: Int,
     val isSpecial: Boolean,
     val title: String,
-    val titleName: String = "",
+    val titleName: String?,
     val pagesRead: Int,
     val coverImageLocked: Boolean,
     val coverImage: String,
