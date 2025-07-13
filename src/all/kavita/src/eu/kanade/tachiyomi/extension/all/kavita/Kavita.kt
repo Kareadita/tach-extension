@@ -1583,27 +1583,23 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                 val matchingChapter = volume.chapters.firstOrNull() // or match a chapterId if available
                     ?: throw IOException(helper.intl["error_no_chapters_found"])
 
-                val pages = mutableListOf<Page>()
-                for (i in 0 until matchingChapter.pages) {
-                    pages.add(
-                        Page(
-                            index = i,
-                            imageUrl = "$apiUrl/Reader/image?chapterId=${matchingChapter.id}&page=$i&extractPdf=true&apiKey=$apiKey",
-                        ),
+                val pages = (0 until matchingChapter.pages).map { i ->
+                    Page(
+                        index = i,
+                        imageUrl = "$apiUrl/Rreader/image?chapterId=${matchingChapter.id}&page=$i&extractPdf=true&apiKey=$apiKey"
                     )
-                }
+                }.toMutableList()
 
-                var pageOffset = 0
+                var pageOffset = matchingChapter.pages
 
                 volume.chapters.sortedBy { it.number.toFloatOrNull() ?: 0f }.forEach { chapterDto ->
-                    for (i in 0 until chapterDto.pages) {
-                        pages.add(
-                            Page(
-                                index = pageOffset + i,
-                                imageUrl = "$apiUrl/Reader/image?chapterId=${chapterDto.id}&page=$i&extractPdf=true&apiKey=$apiKey",
-                            ),
+                    val chapterPages = (0 until chapterDto.pages).map { i ->
+                        Page(
+                            index = pageOffset + i,
+                            imageUrl = "$apiUrl/Reader/image?chapterId=${chapterDto.id}&page=$i&extractPdf=true&apiKey=$apiKey"
                         )
                     }
+                    pages.addAll(chapterPages)
                     pageOffset += chapterDto.pages
                 }
 
@@ -1624,13 +1620,10 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                     throw IOException("${helper.intl["error_failed_parse_chapter"]}: ${e.message}")
                 }
 
-                val pages = mutableListOf<Page>()
-                for (i in 0 until chapterDetails.pages) {
-                    pages.add(
-                        Page(
-                            index = i,
-                            imageUrl = "$apiUrl/Reader/image?chapterId=$chapterId&page=$i&extractPdf=true&apiKey=$apiKey",
-                        ),
+                val pages = (0 until chapterDetails.pages).map { i ->
+                    Page(
+                        index = i,
+                        imageUrl = "$apiUrl/Reader/image?chapterId=$chapterId&page=$i&extractPdf=true&apiKey=$apiKey"
                     )
                 }
                 pages.toList()
@@ -1639,13 +1632,10 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             // Fallback to using the scanlator field if we can't get chapter details
             Log.e(LOG_TAG, "Error fetching chapter details, using fallback", error)
             val fallbackPageCount = chapter.scanlator?.replace(" pages", "")?.toIntOrNull() ?: 1
-            val pages = mutableListOf<Page>()
-            for (i in 0 until fallbackPageCount) {
-                pages.add(
-                    Page(
-                        index = i,
-                        imageUrl = "$apiUrl/Reader/image?chapterId=${chapter.url.substringBefore("_")}&page=$i&extractPdf=true&apiKey=$apiKey",
-                    ),
+            val pages = (0 until fallbackPageCount).map { i ->
+                Page(
+                    index = i,
+                    imageUrl = "$apiUrl/Reader/image?chapterId=${chapter.url.substringBefore("_")}&page=$i&extractPdf=true&apiKey=$apiKey"
                 )
             }
             Observable.just(pages.toList())
