@@ -4,6 +4,8 @@ object KavitaConstants {
 
     const val UNNUMBERED_VOLUME = -100000
     const val UNNUMBERED_VOLUME_STR = "-100000"
+    const val SPECIAL_NUMBER = 100_000
+    const val VOLUME_NUMBER_OFFSET = 100000f
 
     val PERSON_ROLES = listOf(
         "Writer", "Penciller", "Inker", "Colorist",

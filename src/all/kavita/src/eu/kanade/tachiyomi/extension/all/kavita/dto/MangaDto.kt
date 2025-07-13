@@ -20,7 +20,6 @@ enum class MangaFormat(val format: Int) {
 
     companion object {
         private val map = values().associateBy(MangaFormat::format)
-        fun fromInt(type: Int): MangaFormat? = map[type]
     }
 }
 
@@ -190,7 +189,8 @@ data class AuthorDto(
 @Serializable
 data class VolumeDto(
     val id: Int,
-    val minNumber: Int,
+    val minNumber: Double,
+    val maxNumber: Double,
     val name: String = "",
     val pages: Int,
     val pagesRead: Int,
@@ -211,15 +211,15 @@ enum class ChapterType {
     ;
 
     companion object {
-        private const val SPECIAL_NUMBER = 100_000
         private const val UNNUMBERED_VOLUME_NUMBER = -100_000
 
         fun of(chapter: ChapterDto, volume: VolumeDto, libraryType: LibraryTypeEnum? = null): ChapterType =
             when {
                 // Special
-                volume.minNumber == SPECIAL_NUMBER -> Special
+                volume.minNumber.toInt() == KavitaConstants.SPECIAL_NUMBER ||
+                    chapter.minNumber.toInt() == KavitaConstants.SPECIAL_NUMBER -> Special
                 // Issue
-                volume.minNumber == UNNUMBERED_VOLUME_NUMBER -> when (libraryType) {
+                volume.minNumber.toInt() == UNNUMBERED_VOLUME_NUMBER -> when (libraryType) {
                     LibraryTypeEnum.Comic, LibraryTypeEnum.ComicVine -> Issue
                     else -> Chapter
                 }
@@ -241,6 +241,8 @@ data class ChapterDto(
     val id: Int,
     val range: String,
     val number: String,
+    val minNumber: Double,
+    val maxNumber: Double,
     val pages: Int,
     val isSpecial: Boolean,
     val title: String,

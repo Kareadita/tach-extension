@@ -28,6 +28,7 @@ import eu.kanade.tachiyomi.extension.all.kavita.dto.MetadataLibrary
 import eu.kanade.tachiyomi.extension.all.kavita.dto.MetadataPeople
 import eu.kanade.tachiyomi.extension.all.kavita.dto.MetadataPubStatus
 import eu.kanade.tachiyomi.extension.all.kavita.dto.MetadataTag
+import eu.kanade.tachiyomi.extension.all.kavita.dto.MetadataUserRatings
 import eu.kanade.tachiyomi.extension.all.kavita.dto.PersonRole
 import eu.kanade.tachiyomi.extension.all.kavita.dto.ReadingListDto
 import eu.kanade.tachiyomi.extension.all.kavita.dto.ReadingListItemDto
@@ -140,30 +141,48 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
      * - API-style URLs (e.g., `/Series/123`)
      */
     override fun getMangaUrl(manga: SManga): String {
-        return when {
-            // API-style URL (used internally)
-            manga.url.contains("/Series/") -> {
-                val seriesId = helper.getIdFromUrl(manga.url)
-                val cachedSeries = series.find { it.id == seriesId }
-                val libraryId = cachedSeries?.libraryId ?: run {
-                    // Fallback: fetch from API if not cached
-                    val fetched = client.newCall(GET("$apiUrl/Series/$seriesId", headersBuilder().build()))
-                        .execute()
-                        .parseAs<SeriesDto>()
-                    fetched.libraryId
+        return try {
+            when {
+                // Handle both API-style and web-style URLs
+                manga.url.contains("/series/") || manga.url.contains("/Series/") -> {
+                    // Extract series ID from URL (works for both formats)
+                    val seriesId = manga.url
+                        .substringAfterLast("/series/")
+                        .substringAfterLast("/Series/")
+                        .substringBefore("?")
+                        .substringBefore("/")
+                        .toIntOrNull()
+
+                    if (seriesId == null) {
+                        Log.w(LOG_TAG, "Couldn't extract series ID from URL: ${manga.url}")
+                        return manga.url
+                    }
+
+                    // Try to get library ID from cached series first
+                    val cachedSeries = series.find { it.id == seriesId }
+                    val libraryId = cachedSeries?.libraryId
+
+                    if (libraryId != null) {
+                        // Use web-friendly URL format
+                        "$baseUrl/library/$libraryId/series/$seriesId"
+                    } else {
+                        // Fallback to original URL format if we don't have libraryId
+                        "$baseUrl/library/1/series/$seriesId"
+                    }
                 }
-                // Return web-friendly URL for webview while keeping API URL for tracking
-                "$baseUrl/library/$libraryId/series/$seriesId"
-            }
 
-            // Handle reading list URLs
-            manga.url.contains("readingListId=") -> {
-                val readingListId = manga.url.substringAfter("readingListId=").substringBefore("&")
-                "$baseUrl/lists/$readingListId"
-            }
+                // Handle reading list URLs
+                manga.url.contains("readingListId=") -> {
+                    val readingListId = manga.url.substringAfter("readingListId=").substringBefore("&")
+                    "$baseUrl/lists/$readingListId"
+                }
 
-            // Fallback - use original URL if we don't recognize the pattern
-            else -> manga.url
+                // Fallback - use original URL if we don't recognize the pattern
+                else -> manga.url
+            }
+        } catch (e: Exception) {
+            Log.e(LOG_TAG, "Error in getMangaUrl", e)
+            manga.url // Always fall back to original URL
         }
     }
 
@@ -406,7 +425,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                     if (filter.state > 0) {
                         filterV2.addStatement(
                             FilterComparison.GreaterThanEqual,
-                            FilterField.AverageRating,
+                            FilterField.UserRating,
                             filter.state.toString(),
                         )
                     }
@@ -503,22 +522,30 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                             }
                         }
                         is AgeRatingFilterGroup -> {
-                            filter.state.forEach { ageFilter ->
-                                val rating = ageRatingsListMeta.find { it.title == (ageFilter as Filter.TriState).name }
-                                rating?.let {
-                                    when (ageFilter.state) {
-                                        STATE_INCLUDE -> filterV2.addStatement(
-                                            FilterComparison.Contains,
-                                            FilterField.AgeRating,
-                                            rating.value.toString(),
-                                        )
-                                        STATE_EXCLUDE -> filterV2.addStatement(
-                                            FilterComparison.NotContains,
-                                            FilterField.AgeRating,
-                                            rating.value.toString(),
-                                        )
-                                    }
+                            val included = filter.state
+                                .filter { it.state == STATE_INCLUDE }
+                                .mapNotNull { ageFilter ->
+                                    ageRatingsListMeta.find { it.title == ageFilter.name }?.value?.toString()
                                 }
+                            val excluded = filter.state
+                                .filter { it.state == STATE_EXCLUDE }
+                                .mapNotNull { ageFilter ->
+                                    ageRatingsListMeta.find { it.title == ageFilter.name }?.value?.toString()
+                                }
+
+                            if (included.isNotEmpty()) {
+                                filterV2.addStatement(
+                                    FilterComparison.Contains,
+                                    FilterField.AgeRating,
+                                    included.joinToString(","),
+                                )
+                            }
+                            if (excluded.isNotEmpty()) {
+                                filterV2.addStatement(
+                                    FilterComparison.NotContains,
+                                    FilterField.AgeRating,
+                                    excluded.joinToString(","),
+                                )
                             }
                         }
                         is FormatsFilterGroup -> {
@@ -972,9 +999,9 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
 
                     for (volume in volumes) {
                         // Issue: use chapter covers
-                        if (isComicLibrary && volume.minNumber == KavitaConstants.UNNUMBERED_VOLUME) {
+                        if (isComicLibrary && volume.minNumber.toInt() == KavitaConstants.UNNUMBERED_VOLUME) {
                             coverCandidates += volume.chapters
-                                .filterNot { it.coverImage.isNullOrBlank() }
+                                .filterNot { it.coverImage.isBlank() }
                                 .map { chapter ->
                                     Triple(
                                         "$apiUrl/Image/chapter-cover?chapterId=${chapter.id}&apiKey=$apiKey",
@@ -987,7 +1014,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                             val hasSingleFile = volume.chapters.any { chapter ->
                                 ChapterType.of(chapter, volume) == ChapterType.SingleFileVolume
                             }
-                            if (hasSingleFile && !volume.coverImage.isNullOrBlank()) {
+                            if (hasSingleFile && volume.coverImage.isNotBlank()) {
                                 val isUnread = volume.pagesRead < volume.pages
                                 val volumeNumber = volume.minNumber.toFloat()
                                 coverCandidates.add(
@@ -1144,6 +1171,19 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         val items = response.parseAs<List<ReadingListItemDto>>()
         val readingListId = response.request.url.queryParameter("readingListId")
 
+        val firstItem = items.firstOrNull()
+        val isWebtoon = firstItem?.let { item ->
+            runCatching {
+                val meta = client.newCall(GET("$apiUrl/series/metadata?seriesId=${item.seriesId}", headersBuilder().build()))
+                    .execute().parseAs<SeriesDetailPlusDto>()
+
+                val genreTitles = meta.genres.map { it.title }
+                val tagTitles = meta.tags.map { it.title }
+                val typeLabels = listOfNotNull(meta.libraryName)
+                helper.isWebtoonOrLongStrip(genreTitles + tagTitles + typeLabels)
+            }.getOrElse { false }
+        } ?: false
+
         return items.map { item ->
             SChapter.create().apply {
                 url = when {
@@ -1183,9 +1223,9 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                     append("${item.order + 1}. ")
                     when (type) {
                         ChapterType.Regular -> {
-                            val chapterNum = item.chapterNumber?.toIntOrNull()?.let {
-                                it.toString().padStart(2, '0')
-                            } ?: item.chapterNumber ?: ""
+                            val chapterNum = item.chapterNumber?.toIntOrNull()?.toString()
+                                ?.padStart(2, '0')
+                                ?: item.chapterNumber ?: ""
                             when {
                                 item.chapterTitleName?.isNotBlank() == true ->
                                     append("$chapterNum - ${item.chapterTitleName}")
@@ -1202,9 +1242,9 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                             }
                         }
                         ChapterType.Issue -> {
-                            val issueNum = item.chapterNumber?.toIntOrNull()?.let {
-                                it.toString().padStart(3, '0')
-                            } ?: item.chapterNumber ?: ""
+                            val issueNum = item.chapterNumber?.toIntOrNull()?.toString()
+                                ?.padStart(3, '0')
+                                ?: item.chapterNumber ?: ""
                             when {
                                 item.chapterTitleName?.isNotBlank() == true ->
                                     append("${item.chapterTitleName} (#$issueNum)")
@@ -1213,14 +1253,14 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                             }
                         }
                         ChapterType.Chapter -> {
-                            val chapterNum = item.chapterNumber?.toIntOrNull()?.let {
-                                it.toString().padStart(2, '0')
-                            } ?: item.chapterNumber ?: ""
+                            val chapterNum = item.chapterNumber?.toIntOrNull()?.toString()
+                                ?.padStart(2, '0')
+                                ?: item.chapterNumber ?: ""
                             when {
                                 item.chapterTitleName?.isNotBlank() == true ->
                                     append("$chapterNum - ${item.chapterTitleName}")
                                 else ->
-                                    append("Chapter $chapterNum")
+                                    append(if (isWebtoon) "Episode $chapterNum" else "Chapter $chapterNum")
                             }
                         }
                         ChapterType.Special -> {
@@ -1361,31 +1401,59 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             val chapters = mutableListOf<SChapter>()
             val volumeItems = mutableListOf<SChapter>()
 
+            // Get the series name to use as mangaTitle
+            val seriesName = seriesId?.let {
+                runCatching {
+                    client.newCall(GET("$apiUrl/Series/$seriesId", headersBuilder().build()))
+                        .execute().parseAs<SeriesDto>().name
+                }.getOrNull()
+            } ?: ""
+
+            // Get series metadata to determine if it's a webtoon
+            val isWebtoon = seriesId?.let {
+                runCatching {
+                    val meta = client.newCall(GET("$apiUrl/series/metadata?seriesId=$it", headersBuilder().build()))
+                        .execute().parseAs<SeriesDetailPlusDto>()
+                    val genreTitles = meta.genres.map { it.title }
+                    val tagTitles = meta.tags.map { it.title }
+                    val typeLabels = listOfNotNull(meta.libraryName)
+                    helper.isWebtoonOrLongStrip(genreTitles + tagTitles + typeLabels)
+                }.getOrElse { false }
+            } ?: false
+
             volumes.forEach { volume ->
-                // This fixes volumes that are recognized as chapters in Kavita because they have numbers in their titles
-                if (volume.chapters.size == 1 && volume.name.isNotBlank()) {
+                if (volume.chapters.size == 1 && volume.name.isNotBlank() && volume.minNumber.toInt() != KavitaConstants.SPECIAL_NUMBER) {
                     val chapter = volume.chapters.first()
                     val sChapter = helper.chapterFromVolume(
                         chapter,
                         volume,
                         singleFileVolumeNumber = volume.minNumber,
                         libraryType = libraryType,
+                        isWebtoon = isWebtoon,
+                        mangaTitle = seriesName,
                     )
-                    // Force SingleFileVolume type
+                    sChapter.url = "/Chapter/${chapter.id}"
                     sChapter.name = when {
-                        volume.name.any { it.isLetter() } -> "v${volume.minNumber} - ${volume.name}"
-                        else -> "Volume ${volume.minNumber}"
+                        volume.name.any { it.isLetter() } -> "v${helper.formatVolumeNumber(volume)} - ${volume.name}"
+                        else -> "Volume ${helper.formatVolumeNumber(volume)}"
                     }
                     sChapter.chapter_number = volume.minNumber.toFloat()
-                    sChapter.scanlator = "Volume"
+                    sChapter.scanlator = if (isWebtoon) "Season" else "Volume"
                     volumeItems.add(sChapter)
                 } else {
                     volume.chapters.forEach { chapter ->
                         val type = ChapterType.of(chapter, volume, libraryType)
-                        val sChapter = helper.chapterFromVolume(chapter, volume, libraryType = libraryType)
+                        val sChapter = helper.chapterFromVolume(
+                            chapter,
+                            volume,
+                            libraryType = libraryType,
+                            isWebtoon = isWebtoon,
+                            mangaTitle = seriesName,
+                        )
                         if (type == ChapterType.SingleFileVolume) {
                             volumeItems.add(sChapter)
                         } else {
+                            sChapter.url = "/Chapter/${chapter.id}"
                             chapters.add(sChapter)
                         }
                     }
@@ -1393,17 +1461,13 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             }
 
             return when {
-                // Case 1: Only chapters exist
                 chapters.isNotEmpty() && volumeItems.isEmpty() ->
                     chapters.sortedByDescending { it.chapter_number }
 
-                // Case 2: Only volumes exist
                 volumeItems.isNotEmpty() && chapters.isEmpty() ->
                     volumeItems.sortedByDescending { it.chapter_number }
 
-                // Case 3: Mixed content
                 else -> {
-                    // Convert volume numbers to negative for proper sorting
                     volumeItems.forEach { it.chapter_number = -it.chapter_number }
                     (
                         chapters.sortedByDescending { it.chapter_number } +
@@ -1498,41 +1562,60 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             }
         }
 
-        // Original handling for regular chapters
-        val chapterId = chapter.url.substringBefore("_")
+        // For normal titles
         return Observable.fromCallable {
-            val chapterRequest = GET("$apiUrl/Chapter?chapterId=$chapterId", headersBuilder().build())
-            val response = client.newCall(chapterRequest).execute()
+            // Check if this is a volume URL (contains "Volume/")
+            if (chapter.url.contains("/Volume/")) {
+                val volumeId = chapter.url.substringAfter("/Volume/").substringBefore("?").toIntOrNull()
+                    ?: throw IOException("Invalid volume ID")
 
-            if (!response.isSuccessful) {
-                throw IOException("Failed to fetch chapter details: HTTP ${response.code}")
-            }
+                // Get all chapters & pages in this volume
+                val volumeRequest = GET("$apiUrl/Volume/$volumeId", headersBuilder().build())
+                val volume = client.newCall(volumeRequest).execute().parseAs<VolumeDto>()
+                val pages = mutableListOf<Page>()
+                var pageOffset = 0
 
-            // Check content type to ensure we got JSON
-            val contentType = response.header("Content-Type") ?: ""
-            if (!contentType.contains("application/json")) {
-                val bodyPreview = response.peekBody(128).string()
-                throw IOException("${helper.intl["error_unexpected_response"]}: $contentType - $bodyPreview")
-            }
+                volume.chapters.sortedBy { it.number.toFloatOrNull() ?: 0f }.forEach { chapterDto ->
+                    for (i in 0 until chapterDto.pages) {
+                        pages.add(
+                            Page(
+                                index = pageOffset + i,
+                                imageUrl = "$apiUrl/Reader/image?chapterId=${chapterDto.id}&page=$i&extractPdf=true&apiKey=$apiKey",
+                            ),
+                        )
+                    }
+                    pageOffset += chapterDto.pages
+                }
 
-            val chapterDetails = try {
-                response.parseAs<ChapterDto>()
-            } catch (e: Exception) {
-                throw IOException("${helper.intl["error_failed_parse_chapter"]}: ${e.message}")
-            }
+                pages.toList()
+            } else {
+                // Original chapter handling
+                val chapterId = chapter.url.substringAfter("/Chapter/").substringBefore("_")
+                val chapterRequest = GET("$apiUrl/Chapter?chapterId=$chapterId", headersBuilder().build())
+                val response = client.newCall(chapterRequest).execute()
 
-            val pages = mutableListOf<Page>()
-            for (i in 0 until chapterDetails.pages) {
-                pages.add(
-                    Page(
-                        index = i,
-                        imageUrl = "$apiUrl/Reader/image?chapterId=$chapterId&page=$i&extractPdf=true&apiKey=$apiKey",
-                    ),
-                )
+                if (!response.isSuccessful) {
+                    throw IOException("Failed to fetch chapter details: HTTP ${response.code}")
+                }
+
+                val chapterDetails = try {
+                    response.parseAs<ChapterDto>()
+                } catch (e: Exception) {
+                    throw IOException("${helper.intl["error_failed_parse_chapter"]}: ${e.message}")
+                }
+
+                val pages = mutableListOf<Page>()
+                for (i in 0 until chapterDetails.pages) {
+                    pages.add(
+                        Page(
+                            index = i,
+                            imageUrl = "$apiUrl/Reader/image?chapterId=$chapterId&page=$i&extractPdf=true&apiKey=$apiKey",
+                        ),
+                    )
+                }
+                pages.toList()
             }
-            pages.toList()
         }.onErrorResumeNext { error ->
-            // Fallback to using the scanlator field if we can't get chapter details
             Log.e(LOG_TAG, "Error fetching chapter details, using fallback", error)
             val fallbackPageCount = chapter.scanlator?.replace(" pages", "")?.toIntOrNull() ?: 1
             val pages = mutableListOf<Page>()
@@ -1540,7 +1623,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                 pages.add(
                     Page(
                         index = i,
-                        imageUrl = "$apiUrl/Reader/image?chapterId=$chapterId&page=$i&extractPdf=true&apiKey=$apiKey",
+                        imageUrl = "$apiUrl/Reader/image?chapterId=${chapter.url.substringBefore("_")}&page=$i&extractPdf=true&apiKey=$apiKey",
                     ),
                 )
             }
@@ -1578,6 +1661,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
     private var ageRatingsListMeta = emptyList<MetadataAgeRatings>()
     private var peopleListMeta = emptyList<MetadataPeople>()
     private var pubStatusListMeta = emptyList<MetadataPubStatus>()
+    private var userRatingsListMeta = emptyList<MetadataUserRatings>()
     private var languagesListMeta = emptyList<MetadataLanguages>()
     private var libraryListMeta = emptyList<MetadataLibrary>()
     private var collectionsListMeta = emptyList<MetadataCollections>()
@@ -1676,7 +1760,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                     ),
                 )
             }
-            if (ageRatingsListMeta.isNotEmpty() and toggledFilters.contains("Rating")) {
+            if (userRatingsListMeta.isNotEmpty() and toggledFilters.contains("Rating")) {
                 filtersLoaded.add(
                     UserRating(),
                 )
@@ -1914,9 +1998,6 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
 
     private val SharedPreferences.LastVolumeCover: Boolean
         get() = getBoolean(LAST_VOLUME_COVER_PREF, LAST_VOLUME_COVER_DEFAULT)
-
-    private val SharedPreferences.showEpub: Boolean
-        get() = getBoolean(SHOW_EPUB_PREF, SHOW_EPUB_DEFAULT)
 
     private val SharedPreferences.RdDate: Boolean
         get() = getBoolean(RD_DATE_PREF, RD_DATE_DEFAULT)
@@ -2187,15 +2268,16 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                         }
                     client.newCall(GET("$apiUrl/Metadata/publication-status", headersBuilder().build()))
                         .execute().use { response ->
-                            pubStatusListMeta = try {
-                                response.body.use { json.decodeFromString(it.string()) }
+                            if (!response.isSuccessful) {
+                                Log.e(LOG_TAG, "Failed to fetch publication status: ${response.code}")
+                                pubStatusListMeta = emptyList()
+                                return@use
+                            }
+                            try {
+                                pubStatusListMeta = response.body.use { json.decodeFromString(it.string()) }
                             } catch (e: Exception) {
-                                Log.e(
-                                    LOG_TAG,
-                                    "error while decoding JSON for publicationStatusListMeta filter",
-                                    e,
-                                )
-                                emptyList()
+                                Log.e(LOG_TAG, "Error decoding publication status JSON", e)
+                                pubStatusListMeta = emptyList()
                             }
                         }
                     client.newCall(GET("$apiUrl/filter", headersBuilder().build()))
