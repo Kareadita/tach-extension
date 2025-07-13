@@ -1586,7 +1586,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                 val pages = (0 until matchingChapter.pages).map { i ->
                     Page(
                         index = i,
-                        imageUrl = "$apiUrl/Rreader/image?chapterId=${matchingChapter.id}&page=$i&extractPdf=true&apiKey=$apiKey"
+                        imageUrl = "$apiUrl/Reader/image?chapterId=${matchingChapter.id}&page=$i&extractPdf=true&apiKey=$apiKey",
                     )
                 }.toMutableList()
 
