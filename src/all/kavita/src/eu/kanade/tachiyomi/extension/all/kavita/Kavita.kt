@@ -998,36 +998,34 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
 
                     val libraryType = getLibraryType(seriesId)
                     val isComicLibrary = libraryType == LibraryTypeEnum.Comic || libraryType == LibraryTypeEnum.ComicVine
-
-                    val coverCandidates = mutableListOf<Triple<String, Boolean, Float>>()
+                    val coverCandidates = mutableListOf<Triple<String, Boolean, Float>>() // (url, isUnread, number)
+                    val chapterMap = mutableMapOf<String, ChapterDto>()
+                    val volumeMap = mutableMapOf<String, VolumeDto>()
 
                     for (volume in volumes) {
                         // Issue: use chapter covers
                         if (isComicLibrary && volume.minNumber.toInt() == KavitaConstants.UNNUMBERED_VOLUME) {
-                            coverCandidates += volume.chapters
-                                .filterNot { it.coverImage.isBlank() }
-                                .map { chapter ->
-                                    Triple(
-                                        "$apiUrl/Image/chapter-cover?chapterId=${chapter.id}&apiKey=$apiKey",
-                                        chapter.pagesRead < chapter.pages,
-                                        chapter.number.toFloatOrNull() ?: 0f,
+                            for (chapter in volume.chapters) {
+                                if (chapter.coverImage.isNotBlank()) {
+                                    val url = "$apiUrl/Image/chapter-cover?chapterId=${chapter.id}&apiKey=$apiKey"
+                                    coverCandidates.add(
+                                        Triple(url, chapter.pagesRead < chapter.pages, chapter.number.toFloatOrNull() ?: 0f)
                                     )
+                                    chapterMap[url] = chapter
                                 }
-                        } else if (!isComicLibrary) {
-                            // Manga: use volume cover if it has a SingleFileVolume chapter
+                            }
+                        }
+                        // Manga: use volume cover
+                        else if (!isComicLibrary) {
                             val hasSingleFile = volume.chapters.any { chapter ->
                                 ChapterType.of(chapter, volume) == ChapterType.SingleFileVolume
                             }
                             if (hasSingleFile && volume.coverImage.isNotBlank()) {
+                                val url = "$apiUrl/Image/volume-cover?volumeId=${volume.id}&apiKey=$apiKey"
                                 val isUnread = volume.pagesRead < volume.pages
-                                val volumeNumber = volume.minNumber.toFloat()
-                                coverCandidates.add(
-                                    Triple(
-                                        "$apiUrl/Image/volume-cover?volumeId=${volume.id}&apiKey=$apiKey",
-                                        isUnread,
-                                        volumeNumber,
-                                    ),
-                                )
+                                val number = volume.minNumber.toFloat()
+                                coverCandidates.add(Triple(url, isUnread, number))
+                                volumeMap[url] = volume
                             }
                         }
                     }
@@ -1040,7 +1038,22 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                         .minByOrNull { it.third }
                         ?: coverCandidates.maxByOrNull { it.third }
 
-                    targetCover?.first ?: "$apiUrl/image/series-cover?seriesId=$seriesId&apiKey=$apiKey"
+                    targetCover?.first?.let { baseUrl ->
+                        val timestamp = when {
+                            baseUrl.contains("chapter-cover") -> {
+                                val chapter = chapterMap[baseUrl]
+                                chapter?.lastModifiedUtc
+                            }
+                            baseUrl.contains("volume-cover") -> {
+                                val volume = volumeMap[baseUrl]
+                                volume?.lastModified
+                            }
+                            else -> null
+                        } ?: System.currentTimeMillis().toString()
+
+                        // Append cache-busting timestamp to always get the latest cover
+                        "$baseUrl&ts=$timestamp"
+                    } ?: "$apiUrl/image/series-cover?seriesId=$seriesId&apiKey=$apiKey"
                 } catch (e: Exception) {
                     Log.e(LOG_TAG, "Error fetching volumes for cover selection", e)
                     "$apiUrl/image/series-cover?seriesId=${result.seriesId ?: 0}&apiKey=$apiKey"
