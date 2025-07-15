@@ -334,7 +334,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
     }
 
     override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
-        if (genresListMeta.isEmpty() || tagsListMeta.isEmpty() /*...*/) {
+        if (genresListMeta.isEmpty() || tagsListMeta.isEmpty()) {
             Log.w(LOG_TAG, "Metadata not loaded, retrying filters")
             getFilterList() // Re-initialize metadata
         }
@@ -411,11 +411,10 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                         else -> Unit
                     }
                 }
-            } else {
-                // If no people matched, search in series name and localized title
-                filterV2.addStatement(FilterComparison.Matches, FilterField.SeriesName, query)
-                Log.d(LOG_TAG, "No people matched, searching series name and localized title for: '$query'")
             }
+
+            // Always search in series name
+            filterV2.addStatement(FilterComparison.Matches, FilterField.SeriesName, query)
         }
 
         filters.forEach { filter ->
