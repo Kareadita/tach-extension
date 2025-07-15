@@ -8,6 +8,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.preference.EditTextPreference
 import androidx.preference.MultiSelectListPreference
+import androidx.preference.PreferenceScreen
 import androidx.preference.SwitchPreferenceCompat
 import eu.kanade.tachiyomi.AppInfo
 import eu.kanade.tachiyomi.extension.all.kavita.dto.AuthenticationDto
@@ -80,6 +81,7 @@ import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
 import java.io.IOException
 import java.security.MessageDigest
+import java.util.Calendar
 
 class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSource, HttpSource() {
     private val helper = KavitaHelper()
@@ -270,7 +272,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         try {
             val result = response.parseAs<List<SeriesDto>>()
             series = result
-            val mangaList = result.map { item -> helper.createSeriesDto(item, apiUrl, baseUrl) }
+            val mangaList = result.map { item -> helper.createSeriesDto(item, apiUrl, apiKey) }
             return MangasPage(mangaList, helper.hasNextPage(response))
         } catch (e: Exception) {
             Log.e(LOG_TAG, "Unhandled exception", e)
@@ -381,6 +383,40 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             sortOptions = SortOptions(SortFieldEnum.SortName.type, true),
             statements = mutableListOf(),
         )
+
+        // Handle text query first
+        if (query.isNotBlank()) {
+            val queryLower = query.trim().lowercase()
+
+            // First try matching people
+            val matchedPeople = peopleListMeta.filter {
+                it.name.equals(query.trim(), ignoreCase = true) ||
+                    it.name.trim().lowercase().contains(queryLower)
+            }
+
+            if (matchedPeople.isNotEmpty()) {
+                Log.d(LOG_TAG, "Matched people for query '$query': ${matchedPeople.map { it.name }}")
+                matchedPeople.forEach { person ->
+                    when (PersonRole.fromId(person.role ?: -1)) {
+                        PersonRole.Writer -> filterV2.addStatement(FilterComparison.Matches, FilterField.Writers, person.name)
+                        PersonRole.Penciller -> filterV2.addStatement(FilterComparison.Matches, FilterField.Penciller, person.name)
+                        PersonRole.Inker -> filterV2.addStatement(FilterComparison.Matches, FilterField.Inker, person.name)
+                        PersonRole.Colorist -> filterV2.addStatement(FilterComparison.Matches, FilterField.Colorist, person.name)
+                        PersonRole.Letterer -> filterV2.addStatement(FilterComparison.Matches, FilterField.Letterer, person.name)
+                        PersonRole.CoverArtist -> filterV2.addStatement(FilterComparison.Matches, FilterField.CoverArtist, person.name)
+                        PersonRole.Editor -> filterV2.addStatement(FilterComparison.Matches, FilterField.Editor, person.name)
+                        PersonRole.Publisher -> filterV2.addStatement(FilterComparison.Matches, FilterField.Publisher, person.name)
+                        PersonRole.Character -> filterV2.addStatement(FilterComparison.Matches, FilterField.Characters, person.name)
+                        PersonRole.Translator -> filterV2.addStatement(FilterComparison.Matches, FilterField.Translators, person.name)
+                        else -> Unit
+                    }
+                }
+            } else {
+                // If no people matched, search in series name and localized title
+                filterV2.addStatement(FilterComparison.Matches, FilterField.SeriesName, query)
+                Log.d(LOG_TAG, "No people matched, searching series name and localized title for: '$query'")
+            }
+        }
 
         filters.forEach { filter ->
             when (filter) {
@@ -704,37 +740,37 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         }
 
         // @todo Apply search query and people filters via metadata filter
-        if (query.isNotBlank()) {
-            val queryLower = query.trim().lowercase()
-            val matchedPeople = peopleListMeta.filter {
-                it.name.equals(query.trim(), ignoreCase = true) ||
-                    it.name.trim().lowercase().contains(queryLower)
-            }
-
-            if (matchedPeople.isNotEmpty()) {
-                Log.d(LOG_TAG, "Matched people for query '$query': ${matchedPeople.map { it.name }}")
-                matchedPeople.forEach { person ->
-                    when (PersonRole.fromId(person.role ?: -1)) {
-                        PersonRole.Writer -> filterV2.addStatement(FilterComparison.Matches, FilterField.Writers, person.name)
-                        PersonRole.Penciller -> filterV2.addStatement(FilterComparison.Matches, FilterField.Penciller, person.name)
-                        PersonRole.Inker -> filterV2.addStatement(FilterComparison.Matches, FilterField.Inker, person.name)
-                        PersonRole.Colorist -> filterV2.addStatement(FilterComparison.Matches, FilterField.Colorist, person.name)
-                        PersonRole.Letterer -> filterV2.addStatement(FilterComparison.Matches, FilterField.Letterer, person.name)
-                        PersonRole.CoverArtist -> filterV2.addStatement(FilterComparison.Matches, FilterField.CoverArtist, person.name)
-                        PersonRole.Editor -> filterV2.addStatement(FilterComparison.Matches, FilterField.Editor, person.name)
-                        PersonRole.Publisher -> filterV2.addStatement(FilterComparison.Matches, FilterField.Publisher, person.name)
-                        PersonRole.Character -> filterV2.addStatement(FilterComparison.Matches, FilterField.Characters, person.name)
-                        PersonRole.Translator -> filterV2.addStatement(FilterComparison.Matches, FilterField.Translators, person.name)
-                        else -> {
-                            Log.d(LOG_TAG, "Unrecognized role for person: ${person.name}")
-                        }
-                    }
-                }
-            } else {
-                Log.d(LOG_TAG, "No people matched query '$query'. Falling back to SeriesName search.")
-                filterV2.addStatement(FilterComparison.Matches, FilterField.SeriesName, query)
-            }
-        }
+//        if (query.isNotBlank()) {
+//            val queryLower = query.trim().lowercase()
+//            val matchedPeople = peopleListMeta.filter {
+//                it.name.equals(query.trim(), ignoreCase = true) ||
+//                    it.name.trim().lowercase().contains(queryLower)
+//            }
+//
+//            if (matchedPeople.isNotEmpty()) {
+//                Log.d(LOG_TAG, "Matched people for query '$query': ${matchedPeople.map { it.name }}")
+//                matchedPeople.forEach { person ->
+//                    when (PersonRole.fromId(person.role ?: -1)) {
+//                        PersonRole.Writer -> filterV2.addStatement(FilterComparison.Matches, FilterField.Writers, person.name)
+//                        PersonRole.Penciller -> filterV2.addStatement(FilterComparison.Matches, FilterField.Penciller, person.name)
+//                        PersonRole.Inker -> filterV2.addStatement(FilterComparison.Matches, FilterField.Inker, person.name)
+//                        PersonRole.Colorist -> filterV2.addStatement(FilterComparison.Matches, FilterField.Colorist, person.name)
+//                        PersonRole.Letterer -> filterV2.addStatement(FilterComparison.Matches, FilterField.Letterer, person.name)
+//                        PersonRole.CoverArtist -> filterV2.addStatement(FilterComparison.Matches, FilterField.CoverArtist, person.name)
+//                        PersonRole.Editor -> filterV2.addStatement(FilterComparison.Matches, FilterField.Editor, person.name)
+//                        PersonRole.Publisher -> filterV2.addStatement(FilterComparison.Matches, FilterField.Publisher, person.name)
+//                        PersonRole.Character -> filterV2.addStatement(FilterComparison.Matches, FilterField.Characters, person.name)
+//                        PersonRole.Translator -> filterV2.addStatement(FilterComparison.Matches, FilterField.Translators, person.name)
+//                        else -> {
+//                            Log.d(LOG_TAG, "Unrecognized role for person: ${person.name}")
+//                        }
+//                    }
+//                }
+//            } else {
+//                Log.d(LOG_TAG, "No people matched query '$query'. Falling back to SeriesName search.")
+//                filterV2.addStatement(FilterComparison.Matches, FilterField.SeriesName, query)
+//            }
+//        }
 
         // Always apply selected people filters (even if query is blank)
         val roleToField = mapOf(
@@ -786,7 +822,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
 
         return if (manga.url.contains("source=readinglist")) {
             val readingListId = manga.url.substringAfter("readingListId=").substringBefore("&").toIntOrNull()
-            val now = java.util.Calendar.getInstance()
+            val now = Calendar.getInstance()
             val readingList = cachedReadingLists.find { it.id == readingListId }
             if (readingList != null) {
                 val groupTags = preferences.groupTags
@@ -835,7 +871,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
 
                 val hasDates = readingList.startingYear > 0 && readingList.endingYear > 0
                 val status = if (hasDates) {
-                    val endCal = java.util.Calendar.getInstance().apply {
+                    val endCal = Calendar.getInstance().apply {
                         set(readingList.endingYear, readingList.endingMonth - 1, 1)
                     }
                     if (now.after(endCal)) SManga.PUBLISHING_FINISHED else SManga.ONGOING
@@ -930,9 +966,9 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                 .filterNot { it.equals(foundDemographic, ignoreCase = true) }
                 .filterNot { tag -> filteredGenres.any { genre -> genre.equals(tag, ignoreCase = true) } }
 
-            val manga = helper.createSeriesDto(existingSeries, apiUrl, baseUrl)
+            val manga = helper.createSeriesDto(existingSeries, apiUrl, apiKey)
             manga.title = existingSeries.name
-            manga.url = "$baseUrl/Series/${result.seriesId}" // "$baseUrl/library/${existingSeries.libraryId}/series/${result.seriesId}"
+            manga.url = "$apiUrl/Series/${result.seriesId}" // "$baseUrl/library/${existingSeries.libraryId}/series/${result.seriesId}"
             manga.artist = result.coverArtists.joinToString { it.name }
             manga.description = listOfNotNull(
                 ratingLine.takeIf { it.isNotBlank() },
@@ -1077,7 +1113,6 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             }
 
             title = serieDto.name
-            thumbnail_url = "$apiUrl/image/series-cover?seriesId=${result.seriesId}&apiKey=$apiKey"
             status = when (result.publicationStatus) {
                 4 -> SManga.PUBLISHING_FINISHED
                 2 -> SManga.COMPLETED
@@ -1105,11 +1140,11 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         return try {
             val readingLists = response.parseAs<List<ReadingListDto>>()
             cachedReadingLists = readingLists
-            val now = java.util.Calendar.getInstance()
+            val now = Calendar.getInstance()
             val mangaList = readingLists.map { list ->
                 val hasDates = list.startingYear > 0 && list.endingYear > 0
                 val status = if (hasDates) {
-                    val endCal = java.util.Calendar.getInstance().apply {
+                    val endCal = Calendar.getInstance().apply {
                         set(list.endingYear, list.endingMonth - 1, 1)
                     }
                     if (now.after(endCal)) SManga.PUBLISHING_FINISHED else SManga.ONGOING
@@ -1284,7 +1319,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                     try {
                         val seriesDto = client.newCall(GET("$apiUrl/Series/${item.seriesId}", headersBuilder().build()))
                             .execute().parseAs<SeriesDto>()
-                        helper.createSeriesDto(seriesDto, apiUrl, baseUrl)
+                        helper.createSeriesDto(seriesDto, apiUrl, apiKey)
                     } catch (e: Exception) {
                         Log.e(LOG_TAG, "Error fetching series for related reading list", e)
                         null
@@ -1641,7 +1676,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
     override fun searchMangaParse(response: Response): MangasPage {
         return try {
             val result = response.parseAs<List<SeriesDto>>()
-            val mangaList = result.map { helper.createSeriesDto(it, apiUrl, baseUrl) }
+            val mangaList = result.map { helper.createSeriesDto(it, apiUrl, apiKey) }
             MangasPage(mangaList, false)
         } catch (e: Exception) {
             Log.e(LOG_TAG, "Error parsing search results", e)
@@ -1777,7 +1812,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             .add("Authorization", "Bearer $jwtToken")
     }
 
-    override fun setupPreferenceScreen(screen: androidx.preference.PreferenceScreen) {
+    override fun setupPreferenceScreen(screen: PreferenceScreen) {
         val opdsAddressPref = screen.editTextPreference(
             ADDRESS_TITLE,
             "OPDS url",
@@ -1901,7 +1936,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         screen.addPreference(enabledFiltersPref)
     }
 
-    private fun androidx.preference.PreferenceScreen.editTextPreference(
+    private fun PreferenceScreen.editTextPreference(
         preKey: String,
         title: String,
         default: String,
