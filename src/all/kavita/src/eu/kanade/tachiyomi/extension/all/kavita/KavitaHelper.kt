@@ -47,18 +47,17 @@ class KavitaHelper {
         }
     }
 
-    //    Rating Providers from Series-Details-Plus
-    private fun getProviderName(provider: Int): String = when (provider) {
-        0 -> "User"
-        1 -> "AniList"
-        2 -> "MyAnimeList"
-        3 -> "MangaUpdates"
-        else -> "Rating"
-    }
+    //  @todo Rating Providers from Series-Details-Plus
+//    private fun getProviderName(provider: Int): String = when (provider) {
+//        0 -> "User"
+//        1 -> "AniList"
+//        2 -> "MyAnimeList"
+//        3 -> "MangaUpdates"
+//        else -> "Rating"
+//    }
 
-    fun createSeriesDto(obj: SeriesDto, baseUrl: String, apiUrl: String, apiKey: String): SManga =
+    fun createSeriesDto(obj: SeriesDto, baseUrl: String, apiKey: String): SManga =
         SManga.create().apply {
-//             url = "$baseUrl/library/${obj.libraryId}/series/${obj.id}"
             url = "$baseUrl/Series/${obj.id}"
             title = obj.name
             thumbnail_url = "$baseUrl/image/series-cover?seriesId=${obj.id}&apiKey=$apiKey"
@@ -102,16 +101,24 @@ class KavitaHelper {
                     }
 
                     ChapterType.SingleFileVolume -> {
-                        cleanChapterTitle(
-                            when {
-                                volume.name.any { it.isLetter() } -> "v${formatVolumeNumber(volume)} - ${volume.name}"
-                                else -> "Volume ${formatVolumeNumber(volume)}"
-                            },
-                            ChapterTitleContext(
-                                mangaTitle = mangaTitle,
-                                volumeName = volume.name,
-                            ),
-                        )
+                        val volumeNumber = formatVolumeNumber(volume)
+                        val cleanVolumeName = volume.name.trim()
+
+                        // Always use the API's volume number, never parse from title
+                        when {
+                            // If name is empty or just numbers (Kavita default)
+                            cleanVolumeName.isEmpty() || cleanVolumeName.none { it.isLetter() } -> {
+                                cleanChapterTitle("Volume $volumeNumber")
+                            }
+                            // If name already contains volume info (Vol. 3, V3, etc.)
+                            cleanVolumeName.contains(Regex("(?i)(vol|volume|v)[.\\s]*\\d+")) -> {
+                                cleanChapterTitle(cleanVolumeName)
+                            }
+                            // Normal case - prefix with volume number
+                            else -> {
+                                cleanChapterTitle("$volumeNumber - $cleanVolumeName")
+                            }
+                        }
                     }
 
                     ChapterType.Special -> {
@@ -162,47 +169,6 @@ class KavitaHelper {
                     }
                 }
             }
-
-            // @todo Keeping this in case we're switching the logic here this after the Mihon PR
-//            chapter_number = when {
-//                type == ChapterType.SingleFileVolume && singleFileVolumeNumber != null ->
-//                    singleFileVolumeNumber.toFloat()
-//
-//                type == ChapterType.SingleFileVolume -> {
-//                    // For standalone volumes, use positive numbers
-//                    volume.minNumber.toFloat()
-//                }
-//
-//                // For regular chapters
-//                type != ChapterType.SingleFileVolume && type != ChapterType.Special -> {
-//                    // Handle decimal chapter numbers
-//                    if (chapter.minNumber % 1 != 0.0) {
-//                        chapter.minNumber.toFloat()
-//                    } else {
-//                        chapter.minNumber.toInt().toFloat()
-//                    }
-//                }
-//
-//                // For volumes/specials in mixed content, place them below chapter 0
-//                else -> {
-//                    val volumeNum = try {
-//                        if (volume.minNumber % 1 != 0.0) {
-//                            volume.minNumber.toFloat()
-//                        } else {
-//                            volume.minNumber.toInt().toFloat()
-//                        }
-//                    } catch (e: NumberFormatException) {
-//                        0f
-//                    }
-//                    -volumeNum - KavitaConstants.VOLUME_NUMBER_OFFSET
-//                }
-//            }
-//
-//            url = when {
-//                type == ChapterType.SingleFileVolume && singleFileVolumeNumber != null ->
-//                    "volume_${volume.id}"
-//                else -> "chapter_${chapter.id}"
-//            }
 
             // Handle decimal chapter numbers properly
             chapter_number = when {

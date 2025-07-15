@@ -43,7 +43,6 @@ import eu.kanade.tachiyomi.extension.all.kavita.dto.SortOptions
 import eu.kanade.tachiyomi.extension.all.kavita.dto.VolumeDto
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.POST
-import eu.kanade.tachiyomi.network.asObservableSuccess
 import eu.kanade.tachiyomi.source.ConfigurableSource
 import eu.kanade.tachiyomi.source.UnmeteredSource
 import eu.kanade.tachiyomi.source.model.Filter
@@ -55,6 +54,14 @@ import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.online.HttpSource
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
@@ -68,16 +75,11 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
-import rx.Observable
-import rx.Single
-import rx.schedulers.Schedulers
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
 import java.io.IOException
-import java.net.ConnectException
 import java.security.MessageDigest
-import java.util.Locale
 
 class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSource, HttpSource() {
     private val helper = KavitaHelper()
@@ -193,65 +195,40 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
      * Custom implementation for fetch popular, latest and search
      * Handles and logs errors to provide a more detailed exception to the users.
      */
-    private fun fetch(request: Request): Observable<MangasPage> {
-        return client.newCall(request)
-            .asObservableSuccess()
-            .onErrorResumeNext { throwable ->
-                val field = throwable.javaClass.getDeclaredField("code")
-                field.isAccessible = true
-                try {
-                    var code = field.get(throwable)
-                    Log.e(LOG_TAG, "Error fetching manga: ${throwable.message}", throwable)
-                    if (code as Int !in intArrayOf(401, 201, 500)) {
-                        code = 500
-                    }
-                    return@onErrorResumeNext Observable.error(IOException("Http Error: $code\n ${helper.intl["http_errors_$code"]}\n${helper.intl["check_version"]}"))
-                } catch (e: Exception) {
-                    Log.e(LOG_TAG, e.toString(), e)
-                    return@onErrorResumeNext Observable.error(e)
-                }
+    private suspend fun fetch(request: Request): MangasPage = withContext(Dispatchers.IO) {
+        try {
+            val response = client.newCall(request).execute()
+            if (!response.isSuccessful) {
+                val code = response.code
+                throw IOException("Http Error: $code\n ${helper.intl["http_errors_$code"]}\n${helper.intl["check_version"]}")
             }
-            .map { response ->
-                popularMangaParse(response)
-            }
+            popularMangaParse(response)
+        } catch (e: Exception) {
+            Log.e(LOG_TAG, "Error fetching manga", e)
+            throw e
+        }
     }
 
-    @Deprecated(
-        "Use the non-RxJava API instead",
-        replaceWith = ReplaceWith("getPopularManga(page)"),
-    )
-    override fun fetchPopularManga(page: Int): Observable<MangasPage> {
-        return client.newCall(popularMangaRequest(page))
-            .asObservableSuccess()
-            .map { response ->
-                if (!response.isSuccessful) {
-                    throw IOException("HTTP error ${response.code}")
-                }
-                popularMangaParse(response)
+    override suspend fun getPopularManga(page: Int): MangasPage = withContext(Dispatchers.IO) {
+        try {
+            val response = client.newCall(popularMangaRequest(page)).execute()
+            if (!response.isSuccessful) {
+                throw IOException("HTTP error ${response.code}")
             }
-            .onErrorReturn { error ->
-                Log.e(LOG_TAG, "Error fetching popular manga", error)
-                MangasPage(emptyList(), false)
-            }
+            popularMangaParse(response)
+        } catch (e: Exception) {
+            Log.e(LOG_TAG, "Error fetching popular manga", e)
+            MangasPage(emptyList(), false)
+        }
     }
 
-    @Deprecated(
-        "Use the non-RxJava API instead",
-        replaceWith = ReplaceWith("getLatestUpdates(page)"),
-    )
-    override fun fetchLatestUpdates(page: Int) =
-        fetch(latestUpdatesRequest(page))
+    override suspend fun getLatestUpdates(page: Int): MangasPage = fetch(latestUpdatesRequest(page))
 
-    @Deprecated(
-        "Use the non-RxJava API instead",
-        replaceWith = ReplaceWith("getSearchManga(page, query, filters)"),
-    )
-    override fun fetchSearchManga(page: Int, query: String, filters: FilterList): Observable<MangasPage> {
+    override suspend fun getSearchManga(page: Int, query: String, filters: FilterList): MangasPage {
         val specialListFilter = filters.find { it is SpecialListFilter } as? SpecialListFilter
 
         return when (specialListFilter?.state) {
-            1 -> {
-                // Want to Read selected
+            1 -> { // Want to Read selected
                 val payload = """{
                 "id": 0,
                 "name": "",
@@ -268,14 +245,12 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                     headersBuilder().build(),
                     payload.toRequestBody(JSON_MEDIA_TYPE),
                 )
-                return client.newCall(request)
-                    .asObservableSuccess()
-                    .map { popularMangaParse(it) }
+                val response = client.newCall(request).execute()
+                popularMangaParse(response)
             }
             2 -> { // Reading Lists
-                client.newCall(readingListRequest())
-                    .asObservableSuccess()
-                    .map { readingListParse(it) }
+                val response = client.newCall(readingListRequest()).execute()
+                readingListParse(response)
             }
             else -> { // Regular searches
                 fetch(searchMangaRequest(page, query, filters))
@@ -283,15 +258,11 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         }
     }
 
-    @Deprecated(
-        "Use the non-RxJava API instead",
-        replaceWith = ReplaceWith("getChapterList(manga)"),
-    )
-    override fun fetchChapterList(manga: SManga): Observable<List<SChapter>> {
+    override suspend fun getChapterList(manga: SManga): List<SChapter> {
         return if (manga.url.contains("/ReadingList/")) {
             fetchReadingListItems(manga)
         } else {
-            super.fetchChapterList(manga)
+            super.getChapterList(manga)
         }
     }
 
@@ -299,7 +270,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         try {
             val result = response.parseAs<List<SeriesDto>>()
             series = result
-            val mangaList = result.map { item -> helper.createSeriesDto(item, apiUrl, baseUrl, apiKey) }
+            val mangaList = result.map { item -> helper.createSeriesDto(item, apiUrl, baseUrl) }
             return MangasPage(mangaList, helper.hasNextPage(response))
         } catch (e: Exception) {
             Log.e(LOG_TAG, "Unhandled exception", e)
@@ -431,7 +402,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                 is Filter.Group<*> -> {
                     when (filter) {
                         is StatusFilterGroup -> {
-                            val statusFilter = filter.state.firstOrNull() as? StatusFilter
+                            val statusFilter = filter.state.firstOrNull()
                             statusFilter?.state?.let { selectedIndex ->
                                 when (selectedIndex) {
                                     1 -> { // Unread (0%)
@@ -505,22 +476,30 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                         }
 
                         is TagFilterGroup -> {
-                            filter.state.forEach { tagFilter ->
-                                val tag = tagsListMeta.find { it.title == (tagFilter as Filter.TriState).name }
-                                tag?.let {
-                                    when (tagFilter.state) {
-                                        STATE_INCLUDE -> filterV2.addStatement(
-                                            FilterComparison.Contains,
-                                            FilterField.Tags,
-                                            tag.id.toString(),
-                                        )
-                                        STATE_EXCLUDE -> filterV2.addStatement(
-                                            FilterComparison.NotContains,
-                                            FilterField.Tags,
-                                            tag.id.toString(),
-                                        )
-                                    }
+                            val included = filter.state
+                                .filter { it.state == STATE_INCLUDE }
+                                .mapNotNull { tagFilter ->
+                                    tagsListMeta.find { it.title == tagFilter.name }?.id?.toString()
                                 }
+                            val excluded = filter.state
+                                .filter { it.state == STATE_EXCLUDE }
+                                .mapNotNull { tagFilter ->
+                                    tagsListMeta.find { it.title == tagFilter.name }?.id?.toString()
+                                }
+
+                            if (included.isNotEmpty()) {
+                                filterV2.addStatement(
+                                    FilterComparison.Contains,
+                                    FilterField.Tags,
+                                    included.joinToString(","),
+                                )
+                            }
+                            if (excluded.isNotEmpty()) {
+                                filterV2.addStatement(
+                                    FilterComparison.NotContains,
+                                    FilterField.Tags,
+                                    excluded.joinToString(","),
+                                )
                             }
                         }
                         is AgeRatingFilterGroup -> {
@@ -802,102 +781,88 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         "Use the non-RxJava API instead",
         replaceWith = ReplaceWith("getMangaDetails(manga)"),
     )
-    override fun fetchMangaDetails(manga: SManga): Observable<SManga> {
+    override suspend fun getMangaDetails(manga: SManga): SManga {
         val serieId = helper.getIdFromUrl(manga.url)
 
         return if (manga.url.contains("source=readinglist")) {
             val readingListId = manga.url.substringAfter("readingListId=").substringBefore("&").toIntOrNull()
             val now = java.util.Calendar.getInstance()
+            val readingList = cachedReadingLists.find { it.id == readingListId }
+            if (readingList != null) {
+                val groupTags = preferences.groupTags
+                val starting = readingList.startingYear.takeIf { it > 0 }?.let {
+                    "${readingList.startingYear}-${readingList.startingMonth.toString().padStart(2, '0')}"
+                }
+                val ending = readingList.endingYear.takeIf { it > 0 }?.let {
+                    "${readingList.endingYear}-${readingList.endingMonth.toString().padStart(2, '0')}"
+                }
 
-            Observable.fromCallable {
-                val readingList = cachedReadingLists.find { it.id == readingListId }
-                if (readingList != null) {
-                    val groupTags = preferences.groupTags
-                    val starting = readingList.startingYear.takeIf { it > 0 }?.let {
-                        "${readingList.startingYear}-${readingList.startingMonth.toString().padStart(2, '0')}"
-                    }
-                    val ending = readingList.endingYear.takeIf { it > 0 }?.let {
-                        "${readingList.endingYear}-${readingList.endingMonth.toString().padStart(2, '0')}"
-                    }
+                val itemsRequest = GET("$apiUrl/ReadingList/items?readingListId=$readingListId", headersBuilder().build())
+                val items = try {
+                    client.newCall(itemsRequest).execute().parseAs<List<ReadingListItemDto>>()
+                } catch (e: Exception) {
+                    Log.e(LOG_TAG, "Error parsing reading list items", e)
+                    emptyList()
+                }
 
-                    val itemsRequest = GET("$apiUrl/ReadingList/items?readingListId=$readingListId", headersBuilder().build())
-                    val items = try {
-                        client.newCall(itemsRequest).execute().parseAs<List<ReadingListItemDto>>()
+                val allGenres = items.flatMap { item ->
+                    try {
+                        val seriesMetaRequest = GET("$apiUrl/series/metadata?seriesId=${item.seriesId}", headersBuilder().build())
+                        client.newCall(seriesMetaRequest).execute()
+                            .parseAs<SeriesDetailPlusDto>()
+                            .genres.map { it.title }
                     } catch (e: Exception) {
-                        Log.e(LOG_TAG, "Error parsing reading list items", e)
+                        Log.e(LOG_TAG, "Error fetching series metadata for item ${item.seriesId}", e)
                         emptyList()
                     }
+                }.distinct()
 
-                    val allGenres = items.flatMap { item ->
-                        try {
-                            val seriesMetaRequest = GET("$apiUrl/series/metadata?seriesId=${item.seriesId}", headersBuilder().build())
-                            client.newCall(seriesMetaRequest).execute()
-                                .parseAs<SeriesDetailPlusDto>()
-                                .genres.map { it.title }
-                        } catch (e: Exception) {
-                            Log.e(LOG_TAG, "Error fetching series metadata for item ${item.seriesId}", e)
-                            emptyList()
-                        }
-                    }.distinct()
-
-                    val genreString = if (groupTags) {
-                        buildList {
-                            add("Type: Reading List")
-                            starting?.let { add("Starting: $it") }
-                            ending?.let { add("Ending: $it") }
-                            if (allGenres.isNotEmpty()) addAll(allGenres.map { "Genres: $it" })
-                        }.joinToString(", ")
-                    } else {
-                        buildList {
-                            starting?.let { add("Starting: $it") }
-                            ending?.let { add("Ending: $it") }
-                            add("Reading List")
-                            if (allGenres.isNotEmpty()) addAll(allGenres)
-                        }.joinToString(", ")
-                    }
-
-                    val hasDates = readingList.startingYear > 0 && readingList.endingYear > 0
-                    val status = if (hasDates) {
-                        val endCal = java.util.Calendar.getInstance().apply {
-                            set(readingList.endingYear, readingList.endingMonth - 1, 1)
-                        }
-                        if (now.after(endCal)) SManga.PUBLISHING_FINISHED else SManga.ONGOING
-                    } else {
-                        SManga.COMPLETED
-                    }
-
-                    manga.apply {
-                        title = (if (readingList.promoted) "🔺 " else "") + readingList.title
-                        artist = "${readingList.itemCount} items"
-                        thumbnail_url = if (!readingList.coverImage.isNullOrBlank()) {
-                            "$apiUrl/image/${readingList.coverImage}?apiKey=$apiKey"
-                        } else {
-                            "$apiUrl/image/readinglist-cover?readingListId=$readingListId&apiKey=$apiKey"
-                        }
-                        description = readingList.summary ?: "Reading List"
-                        genre = genreString
-                        url = manga.url
-                        initialized = true
-                        this.status = status
-                    }
+                val genreString = if (groupTags) {
+                    buildList {
+                        add("Type: Reading List")
+                        starting?.let { add("Starting: $it") }
+                        ending?.let { add("Ending: $it") }
+                        if (allGenres.isNotEmpty()) addAll(allGenres.map { "Genres: $it" })
+                    }.joinToString(", ")
                 } else {
-                    manga.apply {
-                        initialized = true
+                    buildList {
+                        starting?.let { add("Starting: $it") }
+                        ending?.let { add("Ending: $it") }
+                        add("Reading List")
+                        if (allGenres.isNotEmpty()) addAll(allGenres)
+                    }.joinToString(", ")
+                }
+
+                val hasDates = readingList.startingYear > 0 && readingList.endingYear > 0
+                val status = if (hasDates) {
+                    val endCal = java.util.Calendar.getInstance().apply {
+                        set(readingList.endingYear, readingList.endingMonth - 1, 1)
                     }
+                    if (now.after(endCal)) SManga.PUBLISHING_FINISHED else SManga.ONGOING
+                } else {
+                    SManga.COMPLETED
                 }
-            }.onErrorReturn { error ->
-                Log.e(LOG_TAG, "Error fetching reading list details", error)
+
                 manga.apply {
-                    description = helper.intl["error_loading_reading_list"]
+                    title = (if (readingList.promoted) "🔺 " else "") + readingList.title
+                    artist = "${readingList.itemCount} items"
+                    thumbnail_url = if (!readingList.coverImage.isNullOrBlank()) {
+                        "$apiUrl/image/${readingList.coverImage}?apiKey=$apiKey"
+                    } else {
+                        "$apiUrl/image/readinglist-cover?readingListId=$readingListId&apiKey=$apiKey"
+                    }
+                    description = readingList.summary ?: "Reading List"
+                    genre = genreString
+                    url = manga.url
                     initialized = true
+                    this.status = status
                 }
+            } else {
+                manga.apply { initialized = true }
             }
         } else {
-            client.newCall(GET("$apiUrl/series/metadata?seriesId=$serieId", headersBuilder().build()))
-                .asObservableSuccess()
-                .map { response ->
-                    mangaDetailsParse(response).apply { initialized = true }
-                }
+            val response = client.newCall(GET("$apiUrl/series/metadata?seriesId=$serieId", headersBuilder().build())).execute()
+            mangaDetailsParse(response).apply { initialized = true }
         }
     }
 
@@ -965,9 +930,9 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                 .filterNot { it.equals(foundDemographic, ignoreCase = true) }
                 .filterNot { tag -> filteredGenres.any { genre -> genre.equals(tag, ignoreCase = true) } }
 
-            val manga = helper.createSeriesDto(existingSeries, apiUrl, baseUrl, apiKey)
+            val manga = helper.createSeriesDto(existingSeries, apiUrl, baseUrl)
             manga.title = existingSeries.name
-            manga.url = "$baseUrl/library/${existingSeries.libraryId}/series/${result.seriesId}" // "$apiUrl/Series/${result.seriesId}"
+            manga.url = "$baseUrl/Series/${result.seriesId}" // "$baseUrl/library/${existingSeries.libraryId}/series/${result.seriesId}"
             manga.artist = result.coverArtists.joinToString { it.name }
             manga.description = listOfNotNull(
                 ratingLine.takeIf { it.isNotBlank() },
@@ -1092,7 +1057,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                 .filterNot { it.equals(foundDemographic, ignoreCase = true) }
                 .filterNot { tag -> filteredGenres.any { genre -> genre.equals(tag, ignoreCase = true) } }
 
-            url = "$baseUrl/library/${result.getLibraryId(serieDto)}/series/${result.seriesId}" // "$apiUrl/Series/${result.seriesId}"
+            url = "$baseUrl/Series/${result.seriesId}" // "$baseUrl/library/${result.getLibraryId(serieDto)}/series/${result.seriesId}"
             artist = result.coverArtists.joinToString { it.name }
             description = listOfNotNull(
                 ratingLine.takeIf { it.isNotBlank() },
@@ -1173,13 +1138,11 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         }
     }
 
-    private fun fetchReadingListItems(manga: SManga): Observable<List<SChapter>> {
+    private fun fetchReadingListItems(manga: SManga): List<SChapter> {
         val readingListId = manga.url.substringAfter("readingListId=").substringBefore("&")
         val request = GET("$apiUrl/ReadingList/items?readingListId=$readingListId", headersBuilder().build())
-
-        return client.newCall(request)
-            .asObservableSuccess()
-            .map { parseReadingListItems(it) }
+        val response = client.newCall(request).execute()
+        return parseReadingListItems(response)
     }
 
     private fun parseReadingListItems(response: Response): List<SChapter> {
@@ -1321,7 +1284,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                     try {
                         val seriesDto = client.newCall(GET("$apiUrl/Series/${item.seriesId}", headersBuilder().build()))
                             .execute().parseAs<SeriesDto>()
-                        helper.createSeriesDto(seriesDto, apiUrl, baseUrl, apiKey)
+                        helper.createSeriesDto(seriesDto, apiUrl, baseUrl)
                     } catch (e: Exception) {
                         Log.e(LOG_TAG, "Error fetching series for related reading list", e)
                         null
@@ -1531,11 +1494,10 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         return GET("$apiUrl/$chapterId", headersBuilder().build())
     }
 
-    @Deprecated("Use the non-RxJava API instead", replaceWith = ReplaceWith("getPageList(chapter)"))
-    override fun fetchPageList(chapter: SChapter): Observable<List<Page>> {
+    override suspend fun getPageList(chapter: SChapter): List<Page> = withContext(Dispatchers.IO) {
         // Check if this is a reading list item (has readingListId in URL)
         if (chapter.url.contains("readingListId=")) {
-            return Observable.fromCallable {
+            try {
                 // Extract seriesId from the chapter URL
                 val seriesId = chapter.url.substringAfter("seriesId=").substringBefore("&").toIntOrNull()
                 val readingListId = chapter.url.substringAfter("readingListId=").substringBefore("&").toIntOrNull()
@@ -1560,32 +1522,39 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                 } ?: throw IOException("Item not found in reading list")
 
                 // Get item details based on type
-                val chapterDetails = if (listItem.chapterId != null) {
-                    val request = GET("$apiUrl/Chapter?chapterId=${listItem.chapterId}", headersBuilder().build())
-                    client.newCall(request).execute().parseAs<ChapterDto>()
-                } else if (listItem.volumeId != null) {
-                    // For volumes, get all chapters and let user choose
-                    val volumeRequest = GET("$apiUrl/Volume/${listItem.volumeId}", headersBuilder().build())
-                    val volume = client.newCall(volumeRequest).execute().parseAs<VolumeDto>()
-                    volume.chapters.firstOrNull() ?: throw IOException(helper.intl["error_no_chapters_found"])
-                } else {
-                    throw IOException(helper.intl["error_invalid_reading_list_item"])
+                val chapterDetails = when {
+                    listItem.chapterId != null -> {
+                        // Standard chapter
+                        val request = GET("$apiUrl/Chapter?chapterId=${listItem.chapterId}", headersBuilder().build())
+                        client.newCall(request).execute().parseAs<ChapterDto>()
+                    }
+                    listItem.volumeId != null -> {
+                        // Volume - get first chapter
+                        val volumeRequest = GET("$apiUrl/Volume/${listItem.volumeId}", headersBuilder().build())
+                        val volume = client.newCall(volumeRequest).execute().parseAs<VolumeDto>()
+                        volume.chapters.firstOrNull()?.let {
+                            val chapRequest = GET("$apiUrl/Chapter?chapterId=${it.id}", headersBuilder().build())
+                            client.newCall(chapRequest).execute().parseAs<ChapterDto>()
+                        } ?: throw IOException(helper.intl["error_no_chapters_found"])
+                    }
+                    else -> throw IOException(helper.intl["error_invalid_reading_list_item"])
                 }
 
-                (0 until chapterDetails.pages).map { i ->
+                // Generate pages with consistent URL format
+                return@withContext (0 until chapterDetails.pages).map { i ->
                     Page(
                         index = i,
                         imageUrl = "$apiUrl/Reader/image?chapterId=${chapterDetails.id}&page=$i&extractPdf=true&apiKey=$apiKey",
                     )
                 }
-            }.onErrorResumeNext { error ->
-                Log.e(LOG_TAG, "Error fetching reading list chapter pages", error)
-                Observable.error(error)
+            } catch (e: Exception) {
+                Log.e(LOG_TAG, "Error processing reading list item", e)
+                throw e
             }
         }
 
         // For normal titles
-        return Observable.fromCallable {
+        try {
             // Check if this is a volume URL
             if (chapter.url.contains("/Volume/") || chapter.url.startsWith("volume_")) {
                 val volumeId = when {
@@ -1621,7 +1590,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                         }
                     }
 
-                (initialPages + remainingPages).toList()
+                return@withContext (initialPages + remainingPages).toList()
             } else {
                 // Original chapter handling
                 val chapterId = when {
@@ -1643,23 +1612,23 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                     throw IOException("${helper.intl["error_failed_parse_chapter"]}: ${e.message}")
                 }
 
-                (0 until chapterDetails.pages).map { i ->
+                return@withContext (0 until chapterDetails.pages).map { i ->
                     Page(
                         index = i,
                         imageUrl = "$apiUrl/Reader/image?chapterId=$chapterId&page=$i&extractPdf=true&apiKey=$apiKey",
                     )
                 }
             }
-        }.onErrorResumeNext { error ->
+        } catch (e: Exception) {
             // Fallback to using the scanlator field if we can't get chapter details
-            Log.e(LOG_TAG, "Error fetching chapter details, using fallback", error)
+            Log.e(LOG_TAG, "Error fetching chapter details, using fallback", e)
             val fallbackPageCount = chapter.scanlator?.replace(" pages", "")?.toIntOrNull() ?: 1
-            (0 until fallbackPageCount).map { i ->
+            return@withContext (0 until fallbackPageCount).map { i ->
                 Page(
                     index = i,
                     imageUrl = "$apiUrl/Reader/image?chapterId=${chapter.url.substringBefore("_")}&page=$i&extractPdf=true&apiKey=$apiKey",
                 )
-            }.let { Observable.just(it) }
+            }
         }
     }
 
@@ -1672,7 +1641,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
     override fun searchMangaParse(response: Response): MangasPage {
         return try {
             val result = response.parseAs<List<SeriesDto>>()
-            val mangaList = result.map { helper.createSeriesDto(it, apiUrl, baseUrl, apiKey) }
+            val mangaList = result.map { helper.createSeriesDto(it, apiUrl, baseUrl) }
             MangasPage(mangaList, false)
         } catch (e: Exception) {
             Log.e(LOG_TAG, "Error parsing search results", e)
@@ -1701,101 +1670,77 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
     private var cachedReadingLists: List<ReadingListDto> = emptyList()
 
     /**
-     * Loads the enabled filters if they are not empty so Mihon can show them to the user
+     * Loads the filters if they are not empty so Mihon can show them to the user
      */
+    private fun getFilterList(
+        genres: List<String>,
+        tags: List<String>,
+        ageRatings: List<String>,
+        collections: List<String>,
+        languages: List<String>,
+        libraries: List<String>,
+        people: List<String>,
+        pubStatus: List<String>,
+        smartFilters: Array<String>,
+    ): FilterList {
+        return FilterList(
+            SortFilter(sortableList.map { it.first }.toTypedArray()),
+
+            StatusSeparator(),
+            StatusFilterGroup(),
+
+            // Release year filter
+            ReleaseYearRangeGroup(
+                listOf(
+                    ReleaseYearRange("Min"),
+                    ReleaseYearRange("Max"),
+                ),
+            ),
+
+            GenreFilterGroup(genres.map { GenreFilter(it) }),
+            TagFilterGroup(tags.map { TagFilter(it) }),
+            CollectionFilterGroup(collections.map { CollectionFilter(it) }),
+            LibrariesFilterGroup(libraries.map { LibraryFilter(it) }),
+            LanguageFilterGroup(languages.map { LanguageFilter(it) }),
+            PubStatusFilterGroup(pubStatus.map { PubStatusFilter(it) }),
+            AgeRatingFilterGroup(ageRatings.map { AgeRatingFilter(it) }),
+
+            UserRating(),
+            UserRatingSeparator(),
+
+            // Special filters section
+            Filter.Header(helper.intl["filters_special"]),
+            SpecialListFilter(helper.intl["filters_special_list"]),
+            SmartFiltersFilter(smartFilters),
+
+            // @todo People filters (but not as filters, as a text search)
+//            PeopleHeaderFilter(helper.intl["filters_people"]),
+//            PeopleSeparatorFilter(),
+//            WriterPeopleFilterGroup(people.map { WriterPeopleFilter(it) }),
+//            PencillerPeopleFilterGroup(people.map { PencillerPeopleFilter(it) }),
+//            InkerPeopleFilterGroup(people.map { InkerPeopleFilter(it) }),
+//            ColoristPeopleFilterGroup(people.map { ColoristPeopleFilter(it) }),
+//            LettererPeopleFilterGroup(people.map { LettererPeopleFilter(it) }),
+//            CoverArtistPeopleFilterGroup(people.map { CoverArtistPeopleFilter(it) }),
+//            EditorPeopleFilterGroup(people.map { EditorPeopleFilter(it) }),
+//            PublisherPeopleFilterGroup(people.map { PublisherPeopleFilter(it) }),
+//            CharacterPeopleFilterGroup(people.map { CharacterPeopleFilter(it) }),
+//            TranslatorPeopleFilterGroup(people.map { TranslatorPeopleFilter(it) }),
+        )
+    }
+
     override fun getFilterList(): FilterList {
-        val toggledFilters = getToggledFilters()
-
-        val filters = try {
-            val filtersLoaded = mutableListOf<Filter<*>>()
-
-            filtersLoaded.add(SortFilter(sortableList.map { it.first }.toTypedArray()))
-
-            if (smartFilters.isNotEmpty()) {
-                filtersLoaded.add(SmartFiltersFilter(smartFilters.map { it.name }.toTypedArray()))
-            }
-
-            filtersLoaded.add(SpecialListFilter())
-
-            if (toggledFilters.contains("Read Status")) {
-                filtersLoaded.add(StatusFilterGroup())
-            }
-            if (toggledFilters.contains("ReleaseYearRange")) {
-                filtersLoaded.add(
-                    ReleaseYearRangeGroup(
-                        listOf("Min", "Max").map { ReleaseYearRange(it) },
-                    ),
-                )
-            }
-
-            if (genresListMeta.isNotEmpty() and toggledFilters.contains("Genres")) {
-                filtersLoaded.add(
-                    GenreFilterGroup(genresListMeta.map { GenreFilter(it.title) }),
-                )
-            }
-            if (tagsListMeta.isNotEmpty() and toggledFilters.contains("Tags")) {
-                filtersLoaded.add(
-                    TagFilterGroup(tagsListMeta.map { TagFilter(it.title) }),
-                )
-            }
-            if (ageRatingsListMeta.isNotEmpty() and toggledFilters.contains("Age Rating")) {
-                filtersLoaded.add(
-                    AgeRatingFilterGroup(ageRatingsListMeta.map { AgeRatingFilter(it.title) }),
-                )
-            }
-            if (toggledFilters.contains("Format")) {
-                filtersLoaded.add(
-                    FormatsFilterGroup(
-                        listOf(
-                            "Image",
-                            "Archive",
-                            "Pdf",
-                            "Epub",
-                            "Unknown",
-                        ).map { FormatFilter(it) },
-                    ),
-                )
-            }
-            if (collectionsListMeta.isNotEmpty() and toggledFilters.contains("Collections")) {
-                filtersLoaded.add(
-                    CollectionFilterGroup(collectionsListMeta.map { CollectionFilter(it.title) }),
-                )
-            }
-            if (languagesListMeta.isNotEmpty() and toggledFilters.contains("Languages")) {
-                filtersLoaded.add(
-                    LanguageFilterGroup(languagesListMeta.map { LanguageFilter(it.title) }),
-                )
-            }
-            if (libraryListMeta.isNotEmpty() and toggledFilters.contains("Libraries")) {
-                filtersLoaded.add(
-                    LibrariesFilterGroup(libraryListMeta.map { LibraryFilter(it.name) }),
-                )
-            }
-            if (pubStatusListMeta.isNotEmpty() and toggledFilters.contains("Publication Status")) {
-                filtersLoaded.add(
-                    PubStatusFilterGroup(
-                        listOf(
-                            PubStatusFilter("Ongoing"),
-                            PubStatusFilter("Hiatus"),
-                            PubStatusFilter("Completed"),
-                            PubStatusFilter("Cancelled"),
-                            PubStatusFilter("Ended"),
-                        ),
-                    ),
-                )
-            }
-            if (userRatingsListMeta.isNotEmpty() and toggledFilters.contains("Rating")) {
-                filtersLoaded.add(
-                    UserRating(),
-                )
-            }
-
-            filtersLoaded
-        } catch (e: Exception) {
-            Log.e(LOG_TAG, "[FILTERS] Error while creating filter list", e)
-            FilterList(emptyList())
-        }
-        return FilterList(filters)
+        return getFilterList(
+            genres = genresListMeta.map { it.title },
+            tags = tagsListMeta.map { it.title },
+            ageRatings = ageRatingsListMeta.map { it.title },
+            collections = collectionsListMeta.map { it.title },
+            languages = languagesListMeta.map { it.title },
+            libraries = libraryListMeta.map { it.name },
+            people = peopleListMeta.map { it.name },
+            pubStatus = pubStatusListMeta.map { it.title },
+            smartFilters = smartFilters.map { it.name }.toTypedArray(),
+        )
     }
 
     class LoginErrorException(message: String? = null, cause: Throwable? = null) : Exception(message, cause) {
@@ -2179,165 +2124,88 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         Log.v(LOG_TAG, "[Login] Login successful")
     }
 
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
     init {
         if (apiUrl.isNotBlank()) {
-            Single.fromCallable {
-                doLogin()
-                try { // Get current version
-                    val requestUrl = "$apiUrl/Server/server-info-slim"
-                    val serverInfoDto = client.newCall(GET(requestUrl, headersBuilder().build()))
+            scope.launch {
+                try {
+                    doLogin()
+
+                    // Load all filters in parallel
+                    val deferredFilters = listOf(
+                        async {
+                            genresListMeta = loadMetadata("$apiUrl/Metadata/genres")
+                            Log.d(LOG_TAG, "Loaded ${genresListMeta.size} genres")
+                        },
+                        async {
+                            tagsListMeta = loadMetadata("$apiUrl/Metadata/tags")
+                            Log.d(LOG_TAG, "Loaded ${tagsListMeta.size} tags")
+                        },
+                        async {
+                            ageRatingsListMeta = loadMetadata("$apiUrl/Metadata/age-ratings")
+                            Log.d(LOG_TAG, "Loaded ${ageRatingsListMeta.size} age ratings")
+                        },
+                        async {
+                            collectionsListMeta = loadMetadata("$apiUrl/Collection")
+                            Log.d(LOG_TAG, "Loaded ${collectionsListMeta.size} collections")
+                        },
+                        async {
+                            languagesListMeta = loadMetadata("$apiUrl/Metadata/languages")
+                            Log.d(LOG_TAG, "Loaded ${languagesListMeta.size} languages")
+                        },
+                        async {
+                            libraryListMeta = loadMetadata("$apiUrl/Library/libraries")
+                            Log.d(LOG_TAG, "Loaded ${libraryListMeta.size} libraries")
+                        },
+                        async {
+                            peopleListMeta = loadMetadata("$apiUrl/Metadata/people")
+                            Log.d(LOG_TAG, "Loaded ${peopleListMeta.size} people")
+                        },
+                        async {
+                            pubStatusListMeta = loadMetadata("$apiUrl/Metadata/publication-status")
+                            Log.d(LOG_TAG, "Loaded ${pubStatusListMeta.size} publication statuses")
+                        },
+                        async {
+                            smartFilters = loadMetadata("$apiUrl/filter")
+                            Log.d(LOG_TAG, "Loaded ${smartFilters.size} smart filters")
+                        },
+                    )
+
+                    deferredFilters.awaitAll()
+
+                    // Get server info
+                    val serverInfoDto = client.newCall(GET("$apiUrl/Server/server-info-slim", headersBuilder().build()))
                         .execute()
                         .parseAs<ServerInfoDto>()
-                    Log.e(
-                        LOG_TAG,
-                        "Extension version: code=${AppInfo.getVersionCode()}  name=${AppInfo.getVersionName()}" +
-                            " - - Kavita version: ${serverInfoDto.kavitaVersion} - - Lang:${Locale.getDefault()}",
-                    ) // this is not a real error. Using this so it gets printed in dump logs if there's any error
-                } catch (e: EmptyRequestBody) {
-                    Log.e(LOG_TAG, "Extension version: code=${AppInfo.getVersionCode()} - name=${AppInfo.getVersionName()}")
+                    Log.d(LOG_TAG, "Kavita version: ${serverInfoDto.kavitaVersion}")
                 } catch (e: Exception) {
-                    Log.e(LOG_TAG, "Tachiyomi version: code=${AppInfo.getVersionCode()} - name=${AppInfo.getVersionName()}", e)
-                }
-                try { // Load Filters
-                    // Genres
-                    Log.v(LOG_TAG, "[Filter] Fetching filters ")
-                    client.newCall(GET("$apiUrl/Metadata/genres", headersBuilder().build()))
-                        .execute().use { response ->
-
-                            genresListMeta = try {
-                                response.body.use { json.decodeFromString(it.string()) }
-                            } catch (e: Exception) {
-                                Log.e(LOG_TAG, "[Filter] Error decoding JSON for genres filter -> ${response.body}", e)
-                                emptyList()
-                            }
-                        }
-                    // tagsListMeta
-                    client.newCall(GET("$apiUrl/Metadata/tags", headersBuilder().build()))
-                        .execute().use { response ->
-                            tagsListMeta = try {
-                                response.body.use { json.decodeFromString(it.string()) }
-                            } catch (e: Exception) {
-                                Log.e(LOG_TAG, "[Filter] Error decoding JSON for tagsList filter", e)
-                                emptyList()
-                            }
-                        }
-                    // age-ratings
-                    client.newCall(GET("$apiUrl/Metadata/age-ratings", headersBuilder().build()))
-                        .execute().use { response ->
-                            ageRatingsListMeta = try {
-                                response.body.use { json.decodeFromString(it.string()) }
-                            } catch (e: Exception) {
-                                Log.e(
-                                    LOG_TAG,
-                                    "[Filter] Error decoding JSON for age-ratings filter",
-                                    e,
-                                )
-                                emptyList()
-                            }
-                        }
-                    // collectionsListMeta
-                    client.newCall(GET("$apiUrl/Collection", headersBuilder().build()))
-                        .execute().use { response ->
-                            collectionsListMeta = try {
-                                response.body.use { json.decodeFromString(it.string()) }
-                            } catch (e: Exception) {
-                                Log.e(
-                                    LOG_TAG,
-                                    "[Filter] Error decoding JSON for collectionsListMeta filter",
-                                    e,
-                                )
-                                emptyList()
-                            }
-                        }
-                    // languagesListMeta
-                    client.newCall(GET("$apiUrl/Metadata/languages", headersBuilder().build()))
-                        .execute().use { response ->
-                            languagesListMeta = try {
-                                response.body.use { json.decodeFromString(it.string()) }
-                            } catch (e: Exception) {
-                                Log.e(
-                                    LOG_TAG,
-                                    "[Filter] Error decoding JSON for languagesListMeta filter",
-                                    e,
-                                )
-                                emptyList()
-                            }
-                        }
-                    // libraries
-                    client.newCall(GET("$apiUrl/Library/libraries", headersBuilder().build()))
-                        .execute().use { response ->
-                            libraryListMeta = try {
-                                response.body.use { json.decodeFromString(it.string()) }
-                            } catch (e: Exception) {
-                                Log.e(
-                                    LOG_TAG,
-                                    "[Filter] Error decoding JSON for libraries filter",
-                                    e,
-                                )
-                                emptyList()
-                            }
-                        }
-                    // peopleListMeta
-                    client.newCall(GET("$apiUrl/Metadata/people", headersBuilder().build()))
-                        .execute().use { response ->
-                            peopleListMeta = try {
-                                val jsonString = response.body.string()
-//                                Log.d(LOG_TAG, "Raw people metadata: $jsonString") // Debug log
-                                json.decodeFromString<List<MetadataPeople>>(jsonString)
-                                    .filter { it.role != null } // Filter out entries without role
-                            } catch (e: Exception) {
-                                Log.e(LOG_TAG, "Error decoding people metadata", e)
-                                emptyList()
-                            }
-                        }
-                    client.newCall(GET("$apiUrl/Metadata/publication-status", headersBuilder().build()))
-                        .execute().use { response ->
-                            if (!response.isSuccessful) {
-                                Log.e(LOG_TAG, "Failed to fetch publication status: ${response.code}")
-                                pubStatusListMeta = emptyList()
-                                return@use
-                            }
-                            try {
-                                pubStatusListMeta = response.body.use { json.decodeFromString(it.string()) }
-                            } catch (e: Exception) {
-                                Log.e(LOG_TAG, "Error decoding publication status JSON", e)
-                                pubStatusListMeta = emptyList()
-                            }
-                        }
-                    client.newCall(GET("$apiUrl/filter", headersBuilder().build()))
-                        .execute().use { response ->
-                            smartFilters = try {
-                                response.body.use { json.decodeFromString(it.string()) }
-                            } catch (e: Exception) {
-                                Log.e(
-                                    LOG_TAG,
-                                    "error while decoding JSON for smartfilters",
-                                    e,
-                                )
-                                emptyList()
-                            }
-                        }
-                } catch (e: Exception) {
-                    throw LoadingFilterFailed("Failed Loading Filters", e.cause)
+                    Log.e(LOG_TAG, "Initialization error", e)
                 }
             }
-                .subscribeOn(Schedulers.io())
-                .observeOn(Schedulers.io())
-                .subscribe(
-                    {},
-                    { tr ->
-                        // Avoid polluting logs with traces of exception
-                        if (tr is EmptyRequestBody || tr is LoginErrorException) {
-                            Log.e(LOG_TAG, "error while doing initial calls\n${tr.cause}")
-                            return@subscribe
-                        }
-                        if (tr is ConnectException) { // avoid polluting logs with traces of exception
-                            Log.e(LOG_TAG, "Error while doing initial calls\n${tr.cause}")
-                            return@subscribe
-                        }
-                        Log.e(LOG_TAG, "error while doing initial calls", tr)
-                    },
-                )
         }
+    }
+
+    // Add cleanup for the coroutine scope
+    fun cleanup() {
+        scope.cancel()
+        // Clear any cached data if needed
+        genresListMeta = emptyList()
+        tagsListMeta = emptyList()
+        ageRatingsListMeta = emptyList()
+        peopleListMeta = emptyList()
+        pubStatusListMeta = emptyList()
+        languagesListMeta = emptyList()
+        libraryListMeta = emptyList()
+        collectionsListMeta = emptyList()
+        smartFilters = emptyList()
+        cachedReadingLists = emptyList()
+        Log.d(LOG_TAG, "Cleanup completed")
+    }
+
+    private inline fun <reified T> loadMetadata(url: String): T {
+        return client.newCall(GET(url, headersBuilder().build()))
+            .execute()
+            .parseAs()
     }
 }
