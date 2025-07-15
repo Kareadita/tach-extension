@@ -10,11 +10,6 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
 
-val formatterDate = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-    .apply { timeZone = TimeZone.getTimeZone("UTC") }
-val formatterDateTime = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
-    .apply { timeZone = TimeZone.getTimeZone("UTC") }
-
 fun parseDateSafe(date: String?): Long {
     return date?.let {
         try {
@@ -80,7 +75,7 @@ fun PreferenceScreen.addEditTextPreference(
                 val result = text.isBlank() || validate?.invoke(text) ?: true
 
                 if (restartRequired && result) {
-                    Toast.makeText(context, "Restart Tachiyomi to apply new setting.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, "Restart Mihon to apply new setting.", Toast.LENGTH_LONG).show()
                 }
 
                 result

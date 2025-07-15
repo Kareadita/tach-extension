@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.extension.all.kavita.dto
 
+import eu.kanade.tachiyomi.extension.all.kavita.KavitaConstants
 import eu.kanade.tachiyomi.source.model.SManga
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -8,7 +9,7 @@ interface ConvertibleToSManga {
     fun toSManga(baseUrl: String, apiUrl: String, apiKey: String): SManga
 }
 
-@Serializable
+@Serializable // https://github.com/Kareadita/Kavita/blob/develop/API/Entities/Enums/MangaFormat.cs
 enum class MangaFormat(val format: Int) {
     Image(0),
     Archive(1),
@@ -19,7 +20,6 @@ enum class MangaFormat(val format: Int) {
 
     companion object {
         private val map = values().associateBy(MangaFormat::format)
-        fun fromInt(type: Int): MangaFormat? = map[type]
     }
 }
 
@@ -189,8 +189,9 @@ data class AuthorDto(
 @Serializable
 data class VolumeDto(
     val id: Int,
-    val number: Int,
-    val name: String,
+    val minNumber: Double,
+    val maxNumber: Double,
+    val name: String = "",
     val pages: Int,
     val pagesRead: Int,
     val lastModified: String,
@@ -202,27 +203,34 @@ data class VolumeDto(
 
 @Serializable
 enum class ChapterType {
-    Regular, // chapter with volume information
-    Chapter, // manga chapter without volume information
+    Regular, // Chapter with volume information
+    Chapter, // Chapter without volume information
     SingleFileVolume,
     Special,
     Issue, // For comics
     ;
 
     companion object {
+        private const val UNNUMBERED_VOLUME_NUMBER = -100_000
+
         fun of(chapter: ChapterDto, volume: VolumeDto, libraryType: LibraryTypeEnum? = null): ChapterType =
             when {
-                volume.number == 100_000 -> Special
-                volume.number == -100_000 -> when (libraryType) {
+                // Special
+                volume.minNumber.toInt() == KavitaConstants.SPECIAL_NUMBER ||
+                    chapter.minNumber.toInt() == KavitaConstants.SPECIAL_NUMBER -> Special
+                // Issue
+                volume.minNumber.toInt() == UNNUMBERED_VOLUME_NUMBER -> when (libraryType) {
                     LibraryTypeEnum.Comic, LibraryTypeEnum.ComicVine -> Issue
-                    LibraryTypeEnum.Manga, LibraryTypeEnum.LightNovel, LibraryTypeEnum.Book -> Chapter
-                    else -> Chapter // Default to Chapter for other types
+                    else -> Chapter
                 }
-                chapter.number == "-100000" -> SingleFileVolume
+                // SingleFileVolume
+                chapter.number == KavitaConstants.UNNUMBERED_VOLUME_STR -> SingleFileVolume
+                // Regular
+                volume.minNumber > 0 -> Regular
+                // Everything else depends on library type
                 else -> when (libraryType) {
                     LibraryTypeEnum.Comic, LibraryTypeEnum.ComicVine -> Issue
-                    LibraryTypeEnum.Manga, LibraryTypeEnum.LightNovel, LibraryTypeEnum.Book -> Chapter
-                    else -> Regular
+                    else -> Chapter
                 }
             }
     }
@@ -233,12 +241,15 @@ data class ChapterDto(
     val id: Int,
     val range: String,
     val number: String,
+    val minNumber: Double,
+    val maxNumber: Double,
     val pages: Int,
     val isSpecial: Boolean,
     val title: String,
-    val titleName: String,
+    val titleName: String?,
     val pagesRead: Int,
     val coverImageLocked: Boolean,
+    val coverImage: String,
     val volumeId: Int,
     val created: String,
     val lastModifiedUtc: String,
@@ -259,13 +270,13 @@ data class ReadingListDto(
     val title: String,
     val coverImage: String? = null,
     val promoted: Boolean = false,
-    val summary: String?,
+    val summary: String? = null,
     val itemCount: Int,
     val startingYear: Int,
     val startingMonth: Int,
     val endingYear: Int,
     val endingMonth: Int,
-    val ownerUserName: String?,
+    val ownerUserName: String? = null,
     @SerialName("items") val items: List<ReadingListItemDto> = emptyList(),
 )
 
@@ -278,11 +289,11 @@ data class ReadingListItemDto(
     val seriesName: String,
     val chapterNumber: String?,
     val volumeNumber: String?,
-    val chapterTitleName: String?,
+    val chapterTitleName: String? = null,
     val volumeId: Int?,
-    val title: String?,
-    val summary: String?,
-    val releaseDate: String?,
+    val title: String? = null,
+    val summary: String? = null,
+    val releaseDate: String? = null,
     val libraryName: String?,
     @SerialName("readingListId") val readingListId: Int,
 )
