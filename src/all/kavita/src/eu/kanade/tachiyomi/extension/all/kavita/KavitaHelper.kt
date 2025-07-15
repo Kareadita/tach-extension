@@ -104,8 +104,8 @@ class KavitaHelper {
                     ChapterType.SingleFileVolume -> {
                         cleanChapterTitle(
                             when {
-                                volume.name.any { it.isLetter() } -> "v${volume.minNumber} - ${volume.name}"
-                                else -> "Volume ${volume.minNumber}"
+                                volume.name.any { it.isLetter() } -> "v${formatVolumeNumber(volume)} - ${volume.name}"
+                                else -> "Volume ${formatVolumeNumber(volume)}"
                             },
                             ChapterTitleContext(
                                 mangaTitle = mangaTitle,
@@ -164,7 +164,6 @@ class KavitaHelper {
             }
 
             // @todo Keeping this in case we're switching the logic here this after the Mihon PR
-            // Handle decimal chapter numbers properly
 //            chapter_number = when {
 //                type == ChapterType.SingleFileVolume && singleFileVolumeNumber != null ->
 //                    singleFileVolumeNumber.toFloat()
@@ -206,16 +205,38 @@ class KavitaHelper {
 //            }
 
             // Handle decimal chapter numbers properly
-            chapter_number = if (type == ChapterType.SingleFileVolume) {
-                if (volume.minNumber % 1 != 0.0) {
+            chapter_number = when {
+                type == ChapterType.SingleFileVolume && singleFileVolumeNumber != null ->
                     volume.minNumber.toFloat()
-                } else {
-                    volume.minNumber.toInt().toFloat()
+
+                type == ChapterType.SingleFileVolume -> {
+                    // For standalone volumes, use positive numbers
+                    volume.minNumber.toFloat()
                 }
-            } else if (chapter.minNumber % 1 != 0.0) {
-                chapter.minNumber.toFloat()
-            } else {
-                chapter.minNumber.toInt().toFloat()
+
+                // For regular chapters
+                type != ChapterType.SingleFileVolume && type != ChapterType.Special -> {
+                    // Handle decimal chapter numbers
+                    if (chapter.minNumber % 1 != 0.0) {
+                        chapter.minNumber.toFloat()
+                    } else {
+                        chapter.minNumber.toInt().toFloat()
+                    }
+                }
+
+                // For volumes/specials in mixed content, place them below chapter 0
+                else -> {
+                    val volumeNum = try {
+                        if (volume.minNumber % 1 != 0.0) {
+                            volume.minNumber.toFloat()
+                        } else {
+                            volume.minNumber.toInt().toFloat()
+                        }
+                    } catch (e: NumberFormatException) {
+                        0f
+                    }
+                    volumeNum / KavitaConstants.VOLUME_NUMBER_OFFSET
+                }
             }
 
             url = when {
@@ -224,11 +245,9 @@ class KavitaHelper {
                 else -> "chapter_${chapter.id}"
             }
 
-            // Handle multi-file chapters
             if (chapter.fileCount > 1) {
-                // Add small offset to maintain order while keeping the main chapter number
+                // salt/offset to recognize chapters with new merged part-chapters as new and hence unread
                 chapter_number += 0.001f * chapter.fileCount
-                // Append file count to URL for reference
                 url = "${url}_${chapter.fileCount}"
             }
 
@@ -242,7 +261,7 @@ class KavitaHelper {
             }
         }
 
-    fun formatVolumeNumber(volume: VolumeDto): String {
+    private fun formatVolumeNumber(volume: VolumeDto): String {
         return when {
             volume.maxNumber > volume.minNumber ->
                 "${removeTrailingZero(volume.minNumber)}-${removeTrailingZero(volume.maxNumber)}"
@@ -268,14 +287,11 @@ class KavitaHelper {
     // Helper function to remove .0 from whole numbers while preserving actual decimals
     @SuppressLint("DefaultLocale")
     private fun removeTrailingZero(number: Double): String {
-        return if (number.isInfinite() || number.isNaN()) {
-            number.toString()
+        return if (number % 1 == 0.0) {
+            number.toInt().toString()
         } else {
-            val formatted = String.format("%.10f", number)
-                .replace(",", ".")
-                .trimEnd('0')
-                .trimEnd('.')
-            formatted.ifEmpty { "0" }
+            // Use String.format to avoid scientific notation for very small decimals
+            String.format("%.10f", number).replace(",", ".").trimEnd('0').trimEnd('.')
         }
     }
 

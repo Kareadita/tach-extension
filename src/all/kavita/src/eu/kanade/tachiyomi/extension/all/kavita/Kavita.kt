@@ -145,7 +145,6 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             when {
                 // Handle both API-style and web-style URLs
                 manga.url.contains("/series/") || manga.url.contains("/Series/") -> {
-                    // Extract series ID from URL (works for both formats)
                     val seriesId = manga.url
                         .substringAfterLast("/series/")
                         .substringAfterLast("/Series/")
@@ -166,7 +165,6 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                         // Use web-friendly URL format
                         "$baseUrl/library/$libraryId/series/$seriesId"
                     } else {
-                        // Fallback to original URL format if we don't have libraryId
                         "$baseUrl/library/1/series/$seriesId"
                     }
                 }
@@ -1439,7 +1437,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             } ?: false
 
             volumes.forEach { volume ->
-                // This fixes specials being parsed as volumes
+                // This fixes specials being parsed as volumes sometimes
                 if (volume.chapters.size == 1 && volume.minNumber.toInt() != KavitaConstants.SPECIAL_NUMBER) {
                     val chapter = volume.chapters.first()
                     val sChapter = helper.chapterFromVolume(
@@ -1450,11 +1448,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                         isWebtoon = isWebtoon,
                         mangaTitle = seriesName,
                     )
-                    sChapter.url = "/Chapter/${chapter.id}"
-                    sChapter.name = when {
-                        volume.name.any { it.isLetter() } -> "v${helper.formatVolumeNumber(volume)} - ${volume.name}"
-                        else -> "Volume ${helper.formatVolumeNumber(volume)}"
-                    }
+                    sChapter.url = "/Chapter/${chapter.id}" // Needed to read volumes as chapters
                     sChapter.chapter_number = volume.minNumber.toFloat()
                     sChapter.scanlator = if (isWebtoon) "Season" else "Volume"
                     volumeItems.add(sChapter)
@@ -1469,6 +1463,8 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                             mangaTitle = seriesName,
                         )
                         if (type == ChapterType.SingleFileVolume) {
+                            sChapter.url = "/Chapter/${chapter.id}" // Needed to read volumes as chapters
+                            sChapter.chapter_number = volume.minNumber.toFloat()
                             volumeItems.add(sChapter)
                         } else {
                             chapters.add(sChapter)
@@ -1488,11 +1484,14 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
 
                 // Case 3: Mixed content - chapters first, then volumes
                 else -> {
-                    // Convert volume numbers to negative for proper sorting
-                    volumeItems.forEach { it.chapter_number = -it.chapter_number }
+                    volumeItems.forEachIndexed { index, it ->
+                        if (it.chapter_number <= 0f) {
+                            it.chapter_number = chapters.size + index + 1f
+                        }
+                    }
                     (
                         chapters.sortedByDescending { it.chapter_number } +
-                            volumeItems.sortedBy { it.chapter_number }
+                            volumeItems.sortedByDescending { it.chapter_number }
                         )
                 }
             }
@@ -1519,6 +1518,12 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                 ?: throw IOException(helper.intl["error_chapter_not_found"])
 
             return GET("$apiUrl/${chapterItem.chapterId}", headersBuilder().build())
+        }
+
+        // Handle volume URLs
+        if (chapter.url.startsWith("Volume/")) {
+            val volumeId = chapter.url.substringAfter("Volume/").substringBefore("_")
+            return GET("$apiUrl/Volume/$volumeId", headersBuilder().build())
         }
 
         // Original handling for regular chapters
@@ -1581,10 +1586,13 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
 
         // For normal titles
         return Observable.fromCallable {
-            // Check if this is a volume URL (contains "Volume/")
-            if (chapter.url.contains("/Volume/")) {
-                val volumeId = chapter.url.substringAfter("/Volume/").substringBefore("?").toIntOrNull()
-                    ?: throw IOException("Invalid volume ID")
+            // Check if this is a volume URL
+            if (chapter.url.contains("/Volume/") || chapter.url.startsWith("volume_")) {
+                val volumeId = when {
+                    chapter.url.startsWith("volume_") -> chapter.url.substringAfter("volume_").substringBefore("_")
+                    chapter.url.contains("/Volume/") -> chapter.url.substringAfter("/Volume/").substringBefore("_")
+                    else -> throw IOException("Invalid volume URL format")
+                }
 
                 // Get all pages in this volume
                 val volumeRequest = GET("$apiUrl/Volume/$volumeId", headersBuilder().build())
