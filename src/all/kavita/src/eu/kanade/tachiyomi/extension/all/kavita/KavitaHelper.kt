@@ -31,7 +31,7 @@ class KavitaHelper {
         var hasNextPage = false
         if (!paginationHeader.isNullOrEmpty()) {
             val paginationInfo = json.decodeFromString<PaginationInfo>(paginationHeader)
-            hasNextPage = paginationInfo.currentPage + 1 < paginationInfo.totalPages
+            hasNextPage = paginationInfo.currentPage < paginationInfo.totalPages
         }
         return hasNextPage
     }
