@@ -32,10 +32,7 @@ Or copy & paste this URL into your instance (Suwayomi included):
 https://raw.githubusercontent.com/Kareadita/tach-extensions/repo/index.min.json
 ```
 # Screenshots
-<img src="https://files.catbox.moe/u41pb0.png" width="22%" alt="Komikku1">
-<img src="https://files.catbox.moe/ixxs8u.png" width="22%" alt="Mihon1">
-<img src="https://files.catbox.moe/j4cnlx.png" width="22%" alt="Komikku2">
-<img src="https://files.catbox.moe/nbetf9.png" width="22%" alt="Mihon2">
+<img src="https://files.catbox.moe/u41pb0.png" width="24%" alt="Komikku1"> <img src="https://files.catbox.moe/ixxs8u.png" width="24%" alt="Mihon1"> <img src="https://files.catbox.moe/j4cnlx.png" width="24%" alt="Komikku2"> <img src="https://files.catbox.moe/nbetf9.png" width="24%" alt="Mihon2">
 
 
 # Requests
