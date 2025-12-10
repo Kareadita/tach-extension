@@ -165,15 +165,15 @@ jobs:
           body: |
             ## 🚀 Release ${{ steps.apk_info.outputs.version }}
             
-            ### 📝 Pull Request
-            ${{ steps.pr_info.outputs.pr_number && format('- Pull Request #%s by @%s', steps.pr_info.outputs.pr_number, steps.pr_info.outputs.pr_author) || 'Manual release' }}
-            ${{ steps.pr_info.outputs.pr_title && format('- Title: %s', steps.pr_info.outputs.pr_title) || '' }}
-            ${{ steps.pr_info.outputs.is_first_contributor == 'true' && format('### 🎉 Welcome @%s on their first contribution!', steps.pr_info.outputs.pr_author) || '' }}
+            ${{ steps.pr_info.outputs.pr_body }}
             
-            ${{ steps.pr_info.outputs.pr_body && format('### 📋 Description:\n%s', steps.pr_info.outputs.pr_body) || '' }}
+            ---
             
-            ### 📦 Changes since last release:
+            <details>
+            <summary>📦 View Full Commit Log</summary>
+            
             ${{ steps.changelog.outputs.changelog }}
+            </details>
             
             ---
             🤖 *This release was automatically created*
