@@ -20,107 +20,141 @@ jobs:
           ref: repo
           fetch-depth: 0
 
-      # Get the merged PR info (only if not triggered manually)
+      # Get the merged PR info
       - name: Get PR information
         id: pr_info
-        if: github.event_name == 'push'
         run: |
-          # Check out the master branch to get the PR info
+          # Fetch and checkout master to analyze history
           git fetch origin master:master
           git checkout master
           
-          # Find the merge commit that triggered this workflow
-          MERGE_COMMIT=$(git rev-parse HEAD)
+          # Initialize variables
+          FOUND_PR=false
           
-          # Check if this is a merge commit
-          if git show --summary $MERGE_COMMIT | grep -q "Merge pull request"; then
-            # Extract PR number from merge commit message
-            PR_NUMBER=$(git log -1 --pretty=%B | grep -oP 'Merge pull request #\K\d+')
+          # Get the last 10 merge commits
+          MERGE_COMMITS=$(git log --merges --format='%H' -n 10)
+          
+          for COMMIT in $MERGE_COMMITS; do
+            # Extract PR number
+            PR_NUMBER=$(git show --format=%B -s $COMMIT | grep -oP 'Merge pull request #\K\d+')
+            if [ -z "$PR_NUMBER" ]; then
+               PR_NUMBER=$(git show --format=%B -s $COMMIT | grep -oP '\(#\K\d+(?=\))')
+            fi
           
             if [ -n "$PR_NUMBER" ]; then
-              echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
-          
-              # Get PR details
+              echo "Checking PR #$PR_NUMBER..."
               PR_JSON=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                 https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER)
           
-              # Use heredoc for TITLE in case it has special chars
               PR_TITLE=$(echo "$PR_JSON" | jq -r .title)
-              echo "pr_title=$PR_TITLE" >> $GITHUB_OUTPUT
           
-              PR_AUTHOR=$(echo "$PR_JSON" | jq -r .user.login)
-              echo "pr_author=$PR_AUTHOR" >> $GITHUB_OUTPUT
+              # Check if title matches version pattern
+              if [[ "$PR_TITLE" == *"1.4."* ]]; then
+                 echo "✅ Found Release PR: #$PR_NUMBER - $PR_TITLE"
+                 echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+                 echo "pr_title=$PR_TITLE" >> $GITHUB_OUTPUT
           
-              # Check if first-time contributor
-              CONTRIBUTOR_JSON=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                https://api.github.com/repos/${{ github.repository }}/contributors/$PR_AUTHOR)
-              CONTRIBUTIONS=$(echo "$CONTRIBUTOR_JSON" | jq -r .contributions)
+                 PR_AUTHOR=$(echo "$PR_JSON" | jq -r .user.login)
+                 echo "pr_author=$PR_AUTHOR" >> $GITHUB_OUTPUT
           
-              if [ "$CONTRIBUTIONS" = "1" ]; then
-                echo "is_first_contributor=true" >> $GITHUB_OUTPUT
+                 # Check first-time contributor
+                 CONTRIBUTOR_JSON=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                   https://api.github.com/repos/${{ github.repository }}/contributors/$PR_AUTHOR)
+                 CONTRIBUTIONS=$(echo "$CONTRIBUTOR_JSON" | jq -r .contributions)
+                 if [ "$CONTRIBUTIONS" = "1" ]; then
+                   echo "is_first_contributor=true" >> $GITHUB_OUTPUT
+                 fi
+          
+                 # Get PR body safely
+                 PR_BODY=$(echo "$PR_JSON" | jq -r .body)
+                 {
+                   echo "pr_body<<EOF"
+                   echo "$PR_BODY"
+                   echo "EOF"
+                 } >> $GITHUB_OUTPUT
+          
+                 FOUND_PR=true
+                 break
               fi
-          
-              # Get PR body - Use heredoc for multi-line strings
-              PR_BODY=$(echo "$PR_JSON" | jq -r .body)
-              {
-                echo "pr_body<<EOF"
-                echo "$PR_BODY"
-                echo "EOF"
-              } >> $GITHUB_OUTPUT
             fi
+          done
+          
+          if [ "$FOUND_PR" = "false" ]; then
+            echo "⚠️ No recent PR found matching '1.4.*'."
           fi
 
-      # Find the Kavita APK and extract version
+      # \Switch back to the 'repo' branch where APKs are stored
+      - name: Switch back to repo branch
+        run: |
+          echo "Switching git context back to 'repo' branch..."
+          git checkout repo
+
       - name: Find APK and extract version
         id: apk_info
         run: |
-          # Find the Kavita APK in the apk folder
+          # Find the Kavita APK
           APK_PATH=$(find ./apk -name "tachiyomi-all.kavita-*.apk" -type f | head -n 1)
           
           if [ -z "$APK_PATH" ]; then
-            echo "No Kavita APK found in ./apk folder!"
+            echo "❌ No Kavita APK found in ./apk folder!"
+            echo "Current directory contents:"
+            ls -R
             exit 1
           fi
           
-          echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
-          
-          # Extract version from filename (tachiyomi-all.kavita-v1.4.21.apk -> v1.4.21)
           APK_FILENAME=$(basename "$APK_PATH")
+          # Extract version (e.g., v1.4.22)
           VERSION=$(echo "$APK_FILENAME" | grep -oP 'v\d+\.\d+\.\d+')
           
           if [ -z "$VERSION" ]; then
-            echo "Could not extract version from filename: $APK_FILENAME"
-            VERSION="v$(date +%Y%m%d-%H%M%S)"
+             echo "❌ Could not determine version from filename: $APK_FILENAME"
+             exit 1
           fi
           
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "apk_name=$APK_FILENAME" >> $GITHUB_OUTPUT
-          
           echo "Found APK: $APK_PATH"
-          echo "Extracted version: $VERSION"
+          echo "Detected Version: $VERSION"
+          
+          echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      # Get commit messages since last tag
+      # Check if release already exists to prevent duplicates
+      - name: Check if release exists
+        id: check_release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.apk_info.outputs.version }}"
+          echo "Checking if release $VERSION already exists..."
+          
+          if gh release view "$VERSION" > /dev/null 2>&1; then
+            echo "⚠️ Release $VERSION already exists! Skipping creation."
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Release $VERSION does not exist. Proceeding."
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Get changelog
+        if: steps.check_release.outputs.exists == 'false'
         id: changelog
         run: |
-          # Switch to master branch to get git history
+          # We need master history again for the changelog
           git checkout master
-          
-          # Get the last tag
           LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          
           if [ -n "$LAST_TAG" ]; then
             COMMITS=$(git log $LAST_TAG..HEAD --pretty=format:"- %s (%h)")
           else
             COMMITS=$(git log --pretty=format:"- %s (%h)" -n 20)
           fi
           
-          echo "changelog<<EOF" >> $GITHUB_OUTPUT
-          echo "$COMMITS" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          {
+            echo "changelog<<EOF"
+            echo "$COMMITS"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
 
-      # Create the release (on the repo branch)
       - name: Create Release
+        if: steps.check_release.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
           name: Release ${{ steps.apk_info.outputs.version }}
@@ -146,8 +180,3 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Notify on failure
-        if: failure()
-        run: |
-          echo "Release creation failed. Check the logs for details."
