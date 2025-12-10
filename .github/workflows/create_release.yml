@@ -36,9 +36,11 @@ jobs:
           
           for COMMIT in $MERGE_COMMITS; do
             # Extract PR number
-            PR_NUMBER=$(git show --format=%B -s $COMMIT | grep -oP 'Merge pull request #\K\d+')
+            PR_NUMBER=$(git show --format=%B -s $COMMIT | grep -oP 'Merge pull request #\K\d+' || true)
+          
+            # Fallback: Try to match squash merge pattern "Title (#123)"
             if [ -z "$PR_NUMBER" ]; then
-               PR_NUMBER=$(git show --format=%B -s $COMMIT | grep -oP '\(#\K\d+(?=\))')
+               PR_NUMBER=$(git show --format=%B -s $COMMIT | grep -oP '\(#\K\d+(?=\))' || true)
             fi
           
             if [ -n "$PR_NUMBER" ]; then
