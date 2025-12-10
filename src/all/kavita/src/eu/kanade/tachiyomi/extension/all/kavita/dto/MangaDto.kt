@@ -88,11 +88,6 @@ data class SeriesDetailPlusDto(
             seriesDto?.libraryName
         }
     }
-
-    // Helper function to get the library ID from SeriesDto if needed
-    fun getLibraryId(seriesDto: SeriesDto?): Int? {
-        return libraryId ?: seriesDto?.libraryId
-    }
 }
 
 @Serializable
@@ -253,6 +248,7 @@ data class ChapterDto(
     val volumeId: Int,
     val created: String,
     val lastModifiedUtc: String,
+    val releaseDate: String,
     val files: List<FileDto>? = null,
 ) {
     val fileCount: Int
@@ -262,6 +258,12 @@ data class ChapterDto(
 @Serializable
 data class FileDto(
     val id: Int,
+    val bytes: Long = 0,
+    val pages: Int = 0,
+    val filePath: String = "",
+    val format: Int = 0,
+    val created: String = "",
+    val extension: String = "",
 )
 
 @Serializable

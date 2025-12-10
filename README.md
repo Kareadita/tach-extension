@@ -14,7 +14,7 @@
 
 This repository contains the Kavita extension, compatible with [Komikku](https://github.com/komikku-app/komikku), [Mihon](https://github.com/mihonapp/mihon), Tachiyomi, and other forks.
 
-## Recommended Apps
+## Recommended & Tested
 
 ### - [Mihon](https://github.com/mihonapp/mihon)
 
@@ -26,11 +26,17 @@ This repository contains the Kavita extension, compatible with [Komikku](https:/
     <img alt="Install Kavita Repo" src="https://img.shields.io/badge/Click%20to%20Add%20Kavita%20Repo-49CC90?style=for-the-badge&labelColor=555555&color=49CC90&logo=android&logoColor=white">
 </a>
 
-Or copy & paste this URL into your app:
+Or copy & paste this URL into your instance (Suwayomi included):
 
 ```
 https://raw.githubusercontent.com/Kareadita/tach-extensions/repo/index.min.json
 ```
+# Screenshots
+<img src="https://files.catbox.moe/u41pb0.png" width="22%" alt="Komikku1">
+<img src="https://files.catbox.moe/ixxs8u.png" width="22%" alt="Mihon1">
+<img src="https://files.catbox.moe/j4cnlx.png" width="22%" alt="Komikku2">
+<img src="https://files.catbox.moe/nbetf9.png" width="22%" alt="Mihon2">
+
 
 # Requests
 

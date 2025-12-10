@@ -111,6 +111,7 @@ enum class FilterField(val type: Int) {
     Team(30),
     Location(31),
     ReadLast(32),
+    People(33),
     ;
 
     companion object {

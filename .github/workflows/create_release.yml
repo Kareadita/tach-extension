@@ -1,0 +1,148 @@
+name: Create Release on Merge
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+
+    steps:
+      - name: Checkout repo branch
+        uses: actions/checkout@v4
+        with:
+          ref: repo
+          fetch-depth: 0
+
+      # Get the merged PR info (only if not triggered manually)
+      - name: Get PR information
+        id: pr_info
+        if: github.event_name == 'push'
+        run: |
+          # Check out the master branch to get the PR info
+          git fetch origin master:master
+          git checkout master
+          
+          # Find the merge commit that triggered this workflow
+          MERGE_COMMIT=$(git rev-parse HEAD)
+          
+          # Check if this is a merge commit
+          if git show --summary $MERGE_COMMIT | grep -q "Merge pull request"; then
+            # Extract PR number from merge commit message
+            PR_NUMBER=$(git log -1 --pretty=%B | grep -oP 'Merge pull request #\K\d+')
+          
+            if [ -n "$PR_NUMBER" ]; then
+              echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          
+              # Get PR details
+              PR_JSON=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER)
+          
+              PR_TITLE=$(echo "$PR_JSON" | jq -r .title)
+              echo "pr_title=$PR_TITLE" >> $GITHUB_OUTPUT
+          
+              PR_AUTHOR=$(echo "$PR_JSON" | jq -r .user.login)
+              echo "pr_author=$PR_AUTHOR" >> $GITHUB_OUTPUT
+          
+              # Check if first-time contributor
+              CONTRIBUTOR_JSON=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                https://api.github.com/repos/${{ github.repository }}/contributors/$PR_AUTHOR)
+              CONTRIBUTIONS=$(echo "$CONTRIBUTOR_JSON" | jq -r .contributions)
+          
+              if [ "$CONTRIBUTIONS" = "1" ]; then
+                echo "is_first_contributor=true" >> $GITHUB_OUTPUT
+              fi
+          
+              # Get PR body
+              PR_BODY=$(echo "$PR_JSON" | jq -r .body)
+              echo "pr_body=$PR_BODY" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      # Find the Kavita APK and extract version
+      - name: Find APK and extract version
+        id: apk_info
+        run: |
+          # Find the Kavita APK in the apk folder
+          APK_PATH=$(find ./apk -name "tachiyomi-all.kavita-*.apk" -type f | head -n 1)
+          
+          if [ -z "$APK_PATH" ]; then
+            echo "No Kavita APK found in ./apk folder!"
+            exit 1
+          fi
+          
+          echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
+          
+          # Extract version from filename (tachiyomi-all.kavita-v1.4.21.apk -> v1.4.21)
+          APK_FILENAME=$(basename "$APK_PATH")
+          VERSION=$(echo "$APK_FILENAME" | grep -oP 'v\d+\.\d+\.\d+')
+          
+          if [ -z "$VERSION" ]; then
+            echo "Could not extract version from filename: $APK_FILENAME"
+            VERSION="v$(date +%Y%m%d-%H%M%S)"
+          fi
+          
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "apk_name=$APK_FILENAME" >> $GITHUB_OUTPUT
+          
+          echo "Found APK: $APK_PATH"
+          echo "Extracted version: $VERSION"
+
+      # Get commit messages since last tag
+      - name: Get changelog
+        id: changelog
+        run: |
+          # Switch to master branch to get git history
+          git checkout master
+          
+          # Get the last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          
+          if [ -n "$LAST_TAG" ]; then
+            COMMITS=$(git log $LAST_TAG..HEAD --pretty=format:"- %s (%h)")
+          else
+            COMMITS=$(git log --pretty=format:"- %s (%h)" -n 20)
+          fi
+          
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMITS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      # Create the release (on the repo branch)
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Release ${{ steps.apk_info.outputs.version }}
+          tag_name: ${{ steps.apk_info.outputs.version }}
+          target_commitish: repo
+          body: |
+            ## 🚀 Release ${{ steps.apk_info.outputs.version }}
+            
+            ### 📝 Pull Request
+            ${{ steps.pr_info.outputs.pr_number && format('- Pull Request #%s by @%s', steps.pr_info.outputs.pr_number, steps.pr_info.outputs.pr_author) || 'Manual release' }}
+            ${{ steps.pr_info.outputs.pr_title && format('- Title: %s', steps.pr_info.outputs.pr_title) || '' }}
+            ${{ steps.pr_info.outputs.is_first_contributor == 'true' && format('### 🎉 Welcome @%s on their first contribution!', steps.pr_info.outputs.pr_author) || '' }}
+            
+            ${{ steps.pr_info.outputs.pr_body && format('### 📋 Description:\n%s', steps.pr_info.outputs.pr_body) || '' }}
+            
+            ### 📦 Changes since last release:
+            ${{ steps.changelog.outputs.changelog }}
+            
+            ---
+            🤖 *This release was automatically created*
+          files: ${{ steps.apk_info.outputs.apk_path }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "Release creation failed. Check the logs for details."
