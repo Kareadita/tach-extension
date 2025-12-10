@@ -155,6 +155,12 @@ jobs:
             echo "EOF"
           } >> $GITHUB_OUTPUT
 
+      # Switch back to 'repo' branch to upload the APK
+      - name: Final Switch to repo branch
+        if: steps.check_release.outputs.exists == 'false'
+        run: |
+          git checkout repo
+
       - name: Create Release
         if: steps.check_release.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
