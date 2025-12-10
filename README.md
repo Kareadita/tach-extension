@@ -22,14 +22,14 @@ This repository contains the Kavita extension, compatible with [Komikku](https:/
 
 ## How to add the repo
 
-<a href="https://intradeus.github.io/http-protocol-redirector/?r=tachiyomi://add-repo?url=https://raw.githubusercontent.com/Kareadita/tach-extensions/repo/index.min.json">
+<a href="https://intradeus.github.io/http-protocol-redirector/?r=tachiyomi://add-repo?url=https://raw.githubusercontent.com/Kareadita/tach-extension/repo/index.min.json">
     <img alt="Install Kavita Repo" src="https://img.shields.io/badge/Click%20to%20Add%20Kavita%20Repo-49CC90?style=for-the-badge&labelColor=555555&color=49CC90&logo=android&logoColor=white">
 </a>
 
 Or copy & paste this URL into your instance (Suwayomi included):
 
 ```
-https://raw.githubusercontent.com/Kareadita/tach-extensions/repo/index.min.json
+https://raw.githubusercontent.com/Kareadita/tach-extension/repo/index.min.json
 ```
 
 **Please, follow [our guide](https://wiki.kavitareader.com/guides/3rdparty/tachi-like/) for more detailed instructions with steps and screenshots.**
