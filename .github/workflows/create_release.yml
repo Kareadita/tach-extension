@@ -25,8 +25,8 @@ jobs:
         id: pr_info
         run: |
           # Fetch and checkout master to analyze history
-          git fetch origin master:master
-          git checkout master
+          git fetch origin master
+          git checkout -B master origin/master
           
           # Initialize variables
           FOUND_PR=false
