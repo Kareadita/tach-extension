@@ -16,6 +16,7 @@ import okhttp3.Response
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
+import java.util.concurrent.ConcurrentHashMap
 
 class KavitaHelper {
     val json = Json {
@@ -29,7 +30,7 @@ class KavitaHelper {
     }
 
     // Cache for series information
-    private val seriesCache = mutableMapOf<Int, SeriesDto>()
+    private val seriesCache = ConcurrentHashMap<Int, SeriesDto>()
 
     // Inner class to provide access to series info
     inner class SeriesMapper {
@@ -478,7 +479,7 @@ class KavitaHelper {
         val isWebtoon = context?.isWebtoon ?: false
 
         // Don't modify titles that start with a number followed by a pattern like "12. It's my fate"
-        if (title.matches(Regex("^\\d+\\.\\s+.*"))) {
+        if (title.matches(Regex("^\\d+\\..*"))) {
             return title
         }
 

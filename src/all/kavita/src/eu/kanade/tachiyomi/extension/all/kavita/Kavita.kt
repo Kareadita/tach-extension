@@ -1723,7 +1723,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             return allChapters.sortedByDescending { it.chapter_number }
         } catch (e: Exception) {
             Log.e(LOG_TAG, "Unhandled exception parsing chapters", e)
-            throw IOException(intl["version_exceptions_chapters_parse"]) as Throwable
+            throw IOException(intl["version_exceptions_chapters_parse"])
         }
     }
 
