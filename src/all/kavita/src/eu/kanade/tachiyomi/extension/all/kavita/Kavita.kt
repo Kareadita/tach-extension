@@ -2587,10 +2587,8 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                 try {
                     Log.d(LOG_TAG, "Starting Kavita extension initialization")
 
-                    // First attempt login with timeout
-                    val loginJob = async { doLogin() }
                     try {
-                        loginJob.await()
+                        doLogin()
                     } catch (e: Exception) {
                         Log.e(LOG_TAG, "Login failed during initialization", e)
                         initializationError = e
