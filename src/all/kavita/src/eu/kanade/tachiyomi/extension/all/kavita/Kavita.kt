@@ -258,7 +258,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
 
     override fun getChapterUrl(chapter: SChapter): String {
         // Match `chapter.url` in `chapterFromVolume`
-        return chapter.url.substringBefore("_") // strips fileCount if appended
+        return chapter.url.substringBefore("_").substringBefore("?") // strips fileCount if appended
     }
 
     /**
@@ -1693,7 +1693,6 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                         scanlatorFormat = preferences.scanlatorFormat,
                         volumePageCount = volume.pages,
                     )
-                    sChapter.url = "/Chapter/${chapter.id}"
 
                     // For singleFileVolume, ensure the scanlator field reflects webtoon terminology
                     sChapter.scanlator = if (isWebtoon) "Season" else "Volume"
@@ -1711,8 +1710,6 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                             chapterTitleFormat = preferences.chapterTitleFormat,
                             scanlatorFormat = preferences.scanlatorFormat,
                         )
-
-                        sChapter.url = "/Chapter/${chapter.id}"
 
                         allChapters.add(sChapter)
                     }
