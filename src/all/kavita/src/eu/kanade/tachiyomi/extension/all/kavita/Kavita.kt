@@ -45,6 +45,7 @@ import eu.kanade.tachiyomi.extension.all.kavita.dto.VolumeDto
 import eu.kanade.tachiyomi.lib.i18n.Intl
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.POST
+import eu.kanade.tachiyomi.network.await
 import eu.kanade.tachiyomi.source.ConfigurableSource
 import eu.kanade.tachiyomi.source.UnmeteredSource
 import eu.kanade.tachiyomi.source.model.Filter
@@ -57,7 +58,9 @@ import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.online.HttpSource
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -77,6 +80,9 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
+import rx.Observable
+import rx.Single
+import rx.subscriptions.Subscriptions
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
@@ -85,6 +91,7 @@ import java.security.MessageDigest
 import java.util.Calendar
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.let
 import kotlin.runCatching
 
@@ -267,7 +274,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
      */
     private suspend fun fetch(request: Request): MangasPage = withContext(Dispatchers.IO) {
         try {
-            val response = client.newCall(request).execute()
+            val response = client.newCall(request).await()
             if (!response.isSuccessful) {
                 val code = response.code
                 throw IOException("Http Error: $code\n ${intl["http_errors_$code"]}\n${intl["check_version"]}")
@@ -279,27 +286,37 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         }
     }
 
-    override suspend fun getPopularManga(page: Int): MangasPage = withContext(Dispatchers.IO) {
-        try {
-            val response = client.newCall(popularMangaRequest(page)).execute()
-            if (!response.isSuccessful) {
-                throw IOException("HTTP error ${response.code}")
+    @OptIn(DelicateCoroutinesApi::class)
+    private fun <T : Any> runAsObservable(block: suspend () -> T): Observable<T> =
+        Single.create<T> { subscriber ->
+            val job = GlobalScope.launch {
+                try {
+                    subscriber.onSuccess(block())
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Throwable) {
+                    if (!subscriber.isUnsubscribed) {
+                        subscriber.onError(e)
+                    }
+                }
             }
-            popularMangaParse(response)
-        } catch (e: Exception) {
-            Log.e(LOG_TAG, "Error fetching popular manga", e)
-            MangasPage(emptyList(), false)
-        }
+            subscriber.add(Subscriptions.create { job.cancel() })
+        }.toObservable()
+
+    override fun fetchPopularManga(page: Int): Observable<MangasPage> = runAsObservable {
+        fetch(popularMangaRequest(page))
     }
 
-    override suspend fun getLatestUpdates(page: Int): MangasPage = fetch(latestUpdatesRequest(page))
+    override fun fetchLatestUpdates(page: Int): Observable<MangasPage> = runAsObservable {
+        fetch(latestUpdatesRequest(page))
+    }
 
-    override suspend fun getSearchManga(page: Int, query: String, filters: FilterList): MangasPage {
+    override fun fetchSearchManga(page: Int, query: String, filters: FilterList): Observable<MangasPage> = runAsObservable {
         val specialListFilter = filters.find { it is SpecialListFilter } as? SpecialListFilter
 
-        return when (specialListFilter?.state) {
+        when (specialListFilter?.state) {
             2 -> { // Reading Lists
-                val response = client.newCall(readingListRequest()).execute()
+                val response = client.newCall(readingListRequest()).await()
                 readingListParse(response)
             }
             else -> { // Regular searches (including Want to Read)
@@ -308,11 +325,12 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         }
     }
 
-    override suspend fun getChapterList(manga: SManga): List<SChapter> {
-        return if (manga.url.contains("/ReadingList/")) {
+    override fun fetchChapterList(manga: SManga): Observable<List<SChapter>> = runAsObservable {
+        if (manga.url.contains("/ReadingList/")) {
             fetchReadingListItems(manga)
         } else {
-            super.getChapterList(manga)
+            client.newCall(chapterListRequest(manga)).await()
+                .use(::chapterListParse)
         }
     }
 
@@ -907,14 +925,10 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
      * MANGA DETAILS (metadata about series)
      * **/
 
-    @Deprecated(
-        "Use the non-RxJava API instead",
-        replaceWith = ReplaceWith("getMangaDetails(manga)"),
-    )
-    override suspend fun getMangaDetails(manga: SManga): SManga {
+    override fun fetchMangaDetails(manga: SManga): Observable<SManga> = runAsObservable {
         val serieId = helper.getIdFromUrl(manga.url)
 
-        return if (manga.url.contains("source=readinglist")) {
+        if (manga.url.contains("source=readinglist")) {
             val readingListId = manga.url.substringAfter("readingListId=").substringBefore("&").toIntOrNull()
             val now = Calendar.getInstance()
             val readingList = cachedReadingLists.find { it.id == readingListId }
@@ -929,7 +943,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
 
                 val itemsRequest = GET("$apiUrl/ReadingList/items?readingListId=$readingListId", headersBuilder().build())
                 val items = try {
-                    client.newCall(itemsRequest).execute().parseAs<List<ReadingListItemDto>>()
+                    client.newCall(itemsRequest).await().parseAs<List<ReadingListItemDto>>()
                 } catch (e: Exception) {
                     Log.e(LOG_TAG, "Error parsing reading list items", e)
                     emptyList()
@@ -938,7 +952,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                 val allGenres = items.flatMap { item ->
                     try {
                         val seriesMetaRequest = GET("$apiUrl/series/metadata?seriesId=${item.seriesId}", headersBuilder().build())
-                        client.newCall(seriesMetaRequest).execute()
+                        client.newCall(seriesMetaRequest).await()
                             .parseAs<SeriesDetailPlusDto>()
                             .genres.map { it.title }
                     } catch (e: Exception) {
@@ -991,7 +1005,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                 manga.apply { initialized = true }
             }
         } else {
-            val response = client.newCall(GET("$apiUrl/series/metadata?seriesId=$serieId", headersBuilder().build())).execute()
+            val response = client.newCall(GET("$apiUrl/series/metadata?seriesId=$serieId", headersBuilder().build())).await()
             mangaDetailsParse(response).apply { initialized = true }
         }
     }
@@ -1266,14 +1280,14 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         }
     }
 
-    private fun fetchReadingListItems(manga: SManga): List<SChapter> {
+    private suspend fun fetchReadingListItems(manga: SManga): List<SChapter> {
         val readingListId = manga.url.substringAfter("readingListId=").substringBefore("&")
         val request = GET("$apiUrl/ReadingList/items?readingListId=$readingListId", headersBuilder().build())
-        val response = client.newCall(request).execute()
+        val response = client.newCall(request).await()
         return parseReadingListItems(response)
     }
 
-    private fun parseReadingListItems(response: Response): List<SChapter> {
+    private suspend fun parseReadingListItems(response: Response): List<SChapter> {
         val items = response.parseAs<List<ReadingListItemDto>>()
         val readingListId = response.request.url.queryParameter("readingListId")
 
@@ -1281,7 +1295,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         val isWebtoon = firstItem?.let { item ->
             runCatching<Boolean> {
                 val meta = client.newCall(GET("$apiUrl/series/metadata?seriesId=${item.seriesId}", headersBuilder().build()))
-                    .execute().parseAs<SeriesDetailPlusDto>()
+                    .await().parseAs<SeriesDetailPlusDto>()
 
                 val genreTitles = meta.genres.map { it.title }
                 val tagTitles = meta.tags.map { it.title }
@@ -1303,7 +1317,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                     ?: series.find { it.id == item.seriesId }?.libraryName
                     ?: runCatching {
                         val seriesDto = client.newCall(GET("$apiUrl/Series/${item.seriesId}", headersBuilder().build()))
-                            .execute().parseAs<SeriesDto>()
+                            .await().parseAs<SeriesDto>()
                         seriesDto.libraryName
                     }.getOrNull()
 
@@ -1423,6 +1437,9 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
      * Respect the Allowed Libraries in Latest/Popular Feeds
      * This only works on Komikku
      */
+    override val disableRelatedMangasBySearch: Boolean
+        get() = true
+
     override fun relatedMangaListRequest(manga: SManga): Request {
         return if (manga.url.contains("/ReadingList/") || manga.url.contains("readingListId=")) {
             val readingListId = manga.url.substringAfter("readingListId=").substringBefore("&")
@@ -1757,7 +1774,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         return GET("$apiUrl/$chapterId", headersBuilder().build())
     }
 
-    override suspend fun getPageList(chapter: SChapter): List<Page> = withContext(Dispatchers.IO) {
+    override fun fetchPageList(chapter: SChapter): Observable<List<Page>> = runAsObservable {
         // Check if this is a reading list item (has readingListId in URL)
         if (chapter.url.contains("readingListId=")) {
             try {
@@ -1771,7 +1788,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
 
                 // Get all items in the reading list to find the specific chapter
                 val itemsRequest = GET("$apiUrl/ReadingList/items?readingListId=$readingListId", headersBuilder().build())
-                val items = client.newCall(itemsRequest).execute().parseAs<List<ReadingListItemDto>>()
+                val items = client.newCall(itemsRequest).await().parseAs<List<ReadingListItemDto>>()
 
                 // Find our specific item in the reading list
                 val listItem = items.find { item ->
@@ -1789,22 +1806,22 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                     listItem.chapterId != null -> {
                         // Standard chapter
                         val request = GET("$apiUrl/Chapter?chapterId=${listItem.chapterId}", headersBuilder().build())
-                        client.newCall(request).execute().parseAs<ChapterDto>()
+                        client.newCall(request).await().parseAs<ChapterDto>()
                     }
                     listItem.volumeId != null -> {
                         // Volume - get first chapter
                         val volumeRequest = GET("$apiUrl/Volume/${listItem.volumeId}", headersBuilder().build())
-                        val volume = client.newCall(volumeRequest).execute().parseAs<VolumeDto>()
+                        val volume = client.newCall(volumeRequest).await().parseAs<VolumeDto>()
                         volume.chapters.firstOrNull()?.let {
                             val chapRequest = GET("$apiUrl/Chapter?chapterId=${it.id}", headersBuilder().build())
-                            client.newCall(chapRequest).execute().parseAs<ChapterDto>()
+                            client.newCall(chapRequest).await().parseAs<ChapterDto>()
                         } ?: throw IOException(intl["error_no_chapters_found"])
                     }
                     else -> throw IOException(intl["error_invalid_reading_list_item"])
                 }
 
                 // Generate pages with consistent URL format
-                return@withContext (0 until chapterDetails.pages).map { i ->
+                return@runAsObservable (0 until chapterDetails.pages).map { i ->
                     Page(
                         index = i,
                         imageUrl = "$apiUrl/Reader/image?chapterId=${chapterDetails.id}&page=$i&extractPdf=true&apiKey=$apiKey",
@@ -1834,7 +1851,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
 
                 // Get all pages in this volume
                 val volumeRequest = GET("$apiUrl/Volume/$volumeId", headersBuilder().build())
-                val volume = client.newCall(volumeRequest).execute().parseAs<VolumeDto>()
+                val volume = client.newCall(volumeRequest).await().parseAs<VolumeDto>()
                 val matchingChapter = volume.chapters.firstOrNull() // or match a chapterId if available
                     ?: throw IOException(intl["error_no_chapters_found"])
 
@@ -1859,7 +1876,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                         }
                     }
 
-                return@withContext (initialPages + remainingPages).toList()
+                return@runAsObservable (initialPages + remainingPages).toList()
             } else {
                 // Original chapter handling
                 val chapterId = when {
@@ -1869,7 +1886,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                 }
 
                 val chapterRequest = GET("$apiUrl/Chapter?chapterId=$chapterId", headersBuilder().build())
-                val response = client.newCall(chapterRequest).execute()
+                val response = client.newCall(chapterRequest).await()
 
                 if (!response.isSuccessful) {
                     throw IOException("Failed to fetch chapter details: HTTP ${response.code}")
@@ -1886,7 +1903,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                     throw IOException(errorMessage)
                 }
 
-                return@withContext (0 until chapterDetails.pages).map { i ->
+                return@runAsObservable (0 until chapterDetails.pages).map { i ->
                     Page(
                         index = i,
                         imageUrl = "$apiUrl/Reader/image?chapterId=$chapterId&page=$i&extractPdf=true&apiKey=$apiKey",
@@ -1897,7 +1914,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             // Fallback to using the scanlator field if we can't get chapter details
             Log.e(LOG_TAG, "Error fetching chapter details, using fallback", e)
             val fallbackPageCount = chapter.scanlator?.replace(" pages", "")?.toIntOrNull() ?: 1
-            return@withContext (0 until fallbackPageCount).map { i ->
+            return@runAsObservable (0 until fallbackPageCount).map { i ->
                 Page(
                     index = i,
                     imageUrl = "$apiUrl/Reader/image?chapterId=${chapter.url.substringBefore("_")}&page=$i&extractPdf=true&apiKey=$apiKey",
