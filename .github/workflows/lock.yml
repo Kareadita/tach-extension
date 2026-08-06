@@ -1,9 +1,6 @@
 name: Lock threads
 
 on:
-  # Daily
-  schedule:
-    - cron: '0 0 * * *'
   # Manual trigger
   workflow_dispatch:
     inputs:
