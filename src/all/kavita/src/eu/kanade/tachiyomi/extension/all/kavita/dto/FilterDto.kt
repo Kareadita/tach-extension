@@ -48,10 +48,6 @@ data class FilterStatementDto(
 
 @Serializable
 data class SortOptions(
-    // Kavita validates SortField against the SeriesSortField enum (starts at 1); an
-    // omitted value deserializes to 0 and is rejected with HTTP 400. The host app
-    // serializes with encodeDefaults = false and this default equals the value
-    // popularMangaRequest sets, so force both fields to always be written.
     @EncodeDefault(EncodeDefault.Mode.ALWAYS)
     var sortField: Int = SortFieldEnum.AverageRating.type,
     @EncodeDefault(EncodeDefault.Mode.ALWAYS)
