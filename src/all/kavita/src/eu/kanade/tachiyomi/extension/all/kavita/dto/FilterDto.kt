@@ -6,7 +6,7 @@ import kotlin.Triple
 
 @Serializable
 data class FilterV2Dto(
-    val id: Int? = null,
+    val id: Int = 0,
     val name: String? = null,
     val statements: MutableList<FilterStatementDto> = mutableListOf(),
     val combination: Int = FilterCombination.And.ordinal,
