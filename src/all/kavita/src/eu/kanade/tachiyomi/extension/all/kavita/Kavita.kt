@@ -395,7 +395,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
 
         val payload = json.encodeToJsonElement(filter).toString()
         return POST(
-            "$apiUrl/Series/all-v2?pageNumber=$page&pageSize=20",
+            "$apiUrl/series/all-v2?pageNumber=$page&pageSize=20",
             headersBuilder().build(),
             payload.toRequestBody(JSON_MEDIA_TYPE),
         )
@@ -463,7 +463,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                     val url = if (wantToReadSelected) {
                         "$apiUrl/want-to-read/v2?pageNumber=$page&pageSize=20"
                     } else {
-                        "$apiUrl/Series/all-v2?pageNumber=$page&pageSize=20"
+                        "$apiUrl/series/all-v2?pageNumber=$page&pageSize=20"
                     }
                     return POST(
                         url,
@@ -911,7 +911,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         val url = if (wantToReadSelected) {
             "$apiUrl/want-to-read/v2?pageNumber=$page&pageSize=20"
         } else {
-            "$apiUrl/Series/all-v2?pageNumber=$page&pageSize=20"
+            "$apiUrl/series/all-v2?pageNumber=$page&pageSize=20"
         }
 
         return POST(
