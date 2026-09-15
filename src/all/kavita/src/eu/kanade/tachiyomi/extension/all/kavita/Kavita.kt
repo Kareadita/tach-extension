@@ -380,7 +380,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
 
     override fun popularMangaRequest(page: Int): Request {
         val filter = FilterV2Dto(
-            sortOptions = SortOptions(SortFieldEnum.AverageRating.type, false),
+            sortOptions = SortOptions(SortFieldEnum.UserRating.type, false),
             statements = mutableListOf(),
         )
 

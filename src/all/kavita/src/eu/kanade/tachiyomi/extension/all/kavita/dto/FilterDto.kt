@@ -65,6 +65,7 @@ enum class SortFieldEnum(val type: Int) {
     ReadProgress(7),
     AverageRating(8),
     Random(9),
+    UserRating(10),
     ;
 
     companion object {
