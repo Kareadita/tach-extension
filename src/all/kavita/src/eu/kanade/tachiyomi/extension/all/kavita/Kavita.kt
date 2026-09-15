@@ -264,8 +264,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
     }
 
     override fun getChapterUrl(chapter: SChapter): String {
-        // Match `chapter.url` in `chapterFromVolume`
-        return chapter.url.substringBefore("_") // strips fileCount if appended
+        return helper.cleanChapterUrl(chapter.url)
     }
 
     /**
@@ -1710,7 +1709,6 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                         scanlatorFormat = preferences.scanlatorFormat,
                         volumePageCount = volume.pages,
                     )
-                    sChapter.url = "/Chapter/${chapter.id}"
 
                     // For singleFileVolume, ensure the scanlator field reflects webtoon terminology
                     sChapter.scanlator = if (isWebtoon) "Season" else "Volume"
@@ -1728,8 +1726,6 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                             chapterTitleFormat = preferences.chapterTitleFormat,
                             scanlatorFormat = preferences.scanlatorFormat,
                         )
-
-                        sChapter.url = "/Chapter/${chapter.id}"
 
                         allChapters.add(sChapter)
                     }
@@ -1770,7 +1766,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         }
 
         // Original handling for regular chapters
-        val chapterId = chapter.url.substringBefore("_")
+        val chapterId = helper.cleanChapterUrl(chapter.url)
         return GET("$apiUrl/$chapterId", headersBuilder().build())
     }
 
@@ -1917,7 +1913,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             return@runAsObservable (0 until fallbackPageCount).map { i ->
                 Page(
                     index = i,
-                    imageUrl = "$apiUrl/Reader/image?chapterId=${chapter.url.substringBefore("_")}&page=$i&extractPdf=true&apiKey=$apiKey",
+                    imageUrl = "$apiUrl/Reader/image?chapterId=${helper.cleanChapterUrl(chapter.url)}&page=$i&extractPdf=true&apiKey=$apiKey",
                 )
             }
         }

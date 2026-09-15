@@ -436,6 +436,10 @@ class KavitaHelper {
             scanlator = processChapterTemplate(scanlatorFormat, scanlatorVariables)
         }
 
+    // Strips the markers chapterFromVolume may append to a chapter URL
+    internal fun cleanChapterUrl(url: String): String =
+        url.substringBefore("_").substringBefore("?")
+
     internal fun formatVolumeNumber(volume: VolumeDto): String {
         return when {
             volume.maxNumber > volume.minNumber ->
