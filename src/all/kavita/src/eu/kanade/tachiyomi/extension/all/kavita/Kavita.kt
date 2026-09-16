@@ -2560,7 +2560,14 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             setupLoginHeaders().build(),
             "{}".toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull()),
         )
-        client.newCall(request).execute().use {
+        // Don't auto-follow redirects here: OkHttp downgrades POST to GET on a 301/302,
+        // which then 404s against this POST-only endpoint and hides the real cause (a
+        // reverse proxy redirecting, usually over a http/https or port mismatch).
+        val noRedirectClient = client.newBuilder()
+            .followRedirects(false)
+            .followSslRedirects(false)
+            .build()
+        noRedirectClient.newCall(request).execute().use {
             val peekbody = it.peekBody(Long.MAX_VALUE).toString()
 
             if (it.code == 200) {
@@ -2571,6 +2578,10 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                     Log.e(LOG_TAG, "Possible outdated kavita", e)
                     throw IOException(intl["login_errors_parse_tokendto"])
                 }
+            } else if (it.code in 300..399) {
+                val location = it.header("Location") ?: "(no Location header)"
+                Log.e(LOG_TAG, "[LOGIN] login request was redirected -> Code: ${it.code}. Location: $location")
+                throw LoginErrorException("${intl["login_errors_redirected"]} $location")
             } else {
                 if (it.code == 500) {
                     Log.e(LOG_TAG, "[LOGIN] login failed. There was some error -> Code: ${it.code}.Response message: ${it.message} Response body: $peekbody.")
