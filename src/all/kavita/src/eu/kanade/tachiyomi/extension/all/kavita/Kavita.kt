@@ -1052,7 +1052,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                     try {
                         val detailPlusWrapper = json.decodeFromString<SeriesDetailPlusWrapperDto>(rawResponse)
                         val score = detailPlusWrapper.series?.averageScore?.takeIf { it > 0f }
-                            ?: detailPlusWrapper.ratings.firstOrNull()?.averageScore
+                            ?: detailPlusWrapper.ratings?.firstOrNull()?.averageScore
                             ?: result.ratings.firstOrNull()?.averageScore
                             ?: 0f
                         if (score > 0) "⭐ Score: ${"%.1f".format(score)}\n" else ""
