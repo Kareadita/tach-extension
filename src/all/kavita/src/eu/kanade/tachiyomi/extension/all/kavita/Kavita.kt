@@ -1015,6 +1015,79 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         )
     }
 
+    /**
+     * Picks the series thumbnail. With LastVolumeCover enabled, prefers the cover of the
+     * first unread volume/chapter (lowest number), falling back to the most recent one
+     * (highest number) once everything is read; otherwise falls back to the static series cover.
+     */
+    private fun resolveThumbnailUrl(seriesId: Int?): String {
+        val staticCover = "$apiUrl/image/series-cover?seriesId=${seriesId ?: 0}&apiKey=$apiKey"
+        if (!preferences.LastVolumeCover || seriesId == null) return staticCover
+
+        return try {
+            Log.d(LOG_TAG, "Fetching volumes for series $seriesId")
+            val volumes = client.newCall(
+                GET("$apiUrl/Series/volumes?seriesId=$seriesId", headersBuilder().build()),
+            ).execute().parseAs<List<VolumeDto>>()
+
+            val libraryType = getLibraryType(seriesId)
+            val isComicLibrary = libraryType == LibraryTypeEnum.Comic || libraryType == LibraryTypeEnum.ComicVine
+            val coverCandidates = mutableListOf<Triple<String, Boolean, Float>>() // (url, isUnread, number)
+            val chapterMap = mutableMapOf<String, ChapterDto>()
+            val volumeMap = mutableMapOf<String, VolumeDto>()
+
+            for (volume in volumes) {
+                // Issue: use chapter covers
+                if (isComicLibrary && volume.minNumber.toInt() == KavitaConstants.UNNUMBERED_VOLUME) {
+                    for (chapter in volume.chapters) {
+                        if (chapter.coverImage.isNotBlank()) {
+                            val url = "$apiUrl/Image/chapter-cover?chapterId=${chapter.id}&apiKey=$apiKey"
+                            coverCandidates.add(
+                                Triple(url, chapter.pagesRead < chapter.pages, chapter.number.toFloatOrNull() ?: 0f),
+                            )
+                            chapterMap[url] = chapter
+                        }
+                    }
+                }
+                // Manga: use volume cover
+                else if (!isComicLibrary) {
+                    val hasSingleFile = volume.chapters.any { chapter ->
+                        ChapterType.of(chapter, volume) == ChapterType.SingleFileVolume
+                    }
+                    if (hasSingleFile && volume.coverImage.isNotBlank()) {
+                        val url = "$apiUrl/Image/volume-cover?volumeId=${volume.id}&apiKey=$apiKey"
+                        val isUnread = volume.pagesRead < volume.pages
+                        val number = volume.minNumber.toFloat()
+                        coverCandidates.add(Triple(url, isUnread, number))
+                        volumeMap[url] = volume
+                    }
+                }
+            }
+
+            Log.d(LOG_TAG, "Found ${coverCandidates.size} cover candidates")
+
+            // Prefer first unread (lowest number), else most recent (highest number)
+            val targetCover = coverCandidates
+                .filter { it.second }
+                .minByOrNull { it.third }
+                ?: coverCandidates.maxByOrNull { it.third }
+
+            targetCover?.first?.let { baseUrl ->
+                val timestamp = when {
+                    baseUrl.contains("chapter-cover") -> chapterMap[baseUrl]?.lastModifiedUtc
+                    baseUrl.contains("volume-cover") -> volumeMap[baseUrl]?.lastModified
+                    else -> null
+                } ?: System.currentTimeMillis().toString()
+
+                // Append cache-busting timestamp to always get the latest cover
+                "$baseUrl&ts=$timestamp"
+            } ?: staticCover
+        } catch (e: Exception) {
+            Log.e(LOG_TAG, "Error fetching volumes for cover selection", e)
+            staticCover
+        }
+    }
+
     override fun mangaDetailsParse(response: Response): SManga {
         val result = try {
             response.parseAs<SeriesDetailPlusDto>().takeIf {
@@ -1098,79 +1171,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                 groupTags = preferences.groupTags,
             )
 
-            manga.thumbnail_url = if (preferences.LastVolumeCover) {
-                try {
-                    Log.d(LOG_TAG, "Fetching volumes for series ${result.seriesId}")
-                    val seriesId = result.seriesId ?: 0
-                    val volumes = client.newCall(
-                        GET("$apiUrl/Series/volumes?seriesId=$seriesId", headersBuilder().build()),
-                    ).execute().parseAs<List<VolumeDto>>()
-
-                    val libraryType = getLibraryType(seriesId)
-                    val isComicLibrary = libraryType == LibraryTypeEnum.Comic || libraryType == LibraryTypeEnum.ComicVine
-                    val coverCandidates = mutableListOf<Triple<String, Boolean, Float>>() // (url, isUnread, number)
-                    val chapterMap = mutableMapOf<String, ChapterDto>()
-                    val volumeMap = mutableMapOf<String, VolumeDto>()
-
-                    for (volume in volumes) {
-                        // Issue: use chapter covers
-                        if (isComicLibrary && volume.minNumber.toInt() == KavitaConstants.UNNUMBERED_VOLUME) {
-                            for (chapter in volume.chapters) {
-                                if (chapter.coverImage.isNotBlank()) {
-                                    val url = "$apiUrl/Image/chapter-cover?chapterId=${chapter.id}&apiKey=$apiKey"
-                                    coverCandidates.add(
-                                        Triple(url, chapter.pagesRead < chapter.pages, chapter.number.toFloatOrNull() ?: 0f),
-                                    )
-                                    chapterMap[url] = chapter
-                                }
-                            }
-                        }
-                        // Manga: use volume cover
-                        else if (!isComicLibrary) {
-                            val hasSingleFile = volume.chapters.any { chapter ->
-                                ChapterType.of(chapter, volume) == ChapterType.SingleFileVolume
-                            }
-                            if (hasSingleFile && volume.coverImage.isNotBlank()) {
-                                val url = "$apiUrl/Image/volume-cover?volumeId=${volume.id}&apiKey=$apiKey"
-                                val isUnread = volume.pagesRead < volume.pages
-                                val number = volume.minNumber.toFloat()
-                                coverCandidates.add(Triple(url, isUnread, number))
-                                volumeMap[url] = volume
-                            }
-                        }
-                    }
-
-                    Log.d(LOG_TAG, "Found ${coverCandidates.size} cover candidates")
-
-                    // Prefer first unread (lowest number), else most recent (highest number)
-                    val targetCover = coverCandidates
-                        .filter { it.second }
-                        .minByOrNull { it.third }
-                        ?: coverCandidates.maxByOrNull { it.third }
-
-                    targetCover?.first?.let { baseUrl ->
-                        val timestamp = when {
-                            baseUrl.contains("chapter-cover") -> {
-                                val chapter = chapterMap[baseUrl]
-                                chapter?.lastModifiedUtc
-                            }
-                            baseUrl.contains("volume-cover") -> {
-                                val volume = volumeMap[baseUrl]
-                                volume?.lastModified
-                            }
-                            else -> null
-                        } ?: System.currentTimeMillis().toString()
-
-                        // Append cache-busting timestamp to always get the latest cover
-                        "$baseUrl&ts=$timestamp"
-                    } ?: "$apiUrl/image/series-cover?seriesId=$seriesId&apiKey=$apiKey"
-                } catch (e: Exception) {
-                    Log.e(LOG_TAG, "Error fetching volumes for cover selection", e)
-                    "$apiUrl/image/series-cover?seriesId=${result.seriesId ?: 0}&apiKey=$apiKey"
-                }
-            } else {
-                "$apiUrl/image/series-cover?seriesId=${result.seriesId ?: 0}&apiKey=$apiKey"
-            }
+            manga.thumbnail_url = resolveThumbnailUrl(result.seriesId)
 
             manga.status = when (result.publicationStatus) {
                 4 -> SManga.PUBLISHING_FINISHED
@@ -1199,6 +1200,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             val filteredTags = triple.third.second
 
             url = "$baseUrl/Series/${result.seriesId}" // "$baseUrl/library/${result.getLibraryId(serieDto)}/series/${result.seriesId}"
+            thumbnail_url = resolveThumbnailUrl(result.seriesId)
             artist = result.coverArtists.joinToString { it.name }
             description = listOfNotNull(
                 ratingLine.takeIf { it.isNotBlank() },
