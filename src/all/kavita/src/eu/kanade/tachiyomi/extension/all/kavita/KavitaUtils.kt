@@ -6,6 +6,7 @@ import android.widget.Button
 import android.widget.Toast
 import androidx.preference.EditTextPreference
 import androidx.preference.PreferenceScreen
+import okhttp3.Headers
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
@@ -85,4 +86,51 @@ fun PreferenceScreen.addEditTextPreference(
             }
         }
     }.also(::addPreference)
+}
+
+/**
+ * Parses user-supplied reverse-proxy headers.
+ *
+ * Expected format: one `Header-Name: value` pair per line.
+ * Blank lines and lines starting with `#` are ignored.
+ * `Authorization` is reserved for Kavita JWT auth and is skipped.
+ */
+internal fun parseCustomHttpHeaders(raw: String): Headers {
+    val builder = Headers.Builder()
+    raw.lineSequence()
+        .map { it.trim() }
+        .filter { it.isNotEmpty() && !it.startsWith("#") }
+        .forEach { line ->
+            val idx = line.indexOf(':')
+            if (idx <= 0) return@forEach
+            val name = line.substring(0, idx).trim()
+            val value = line.substring(idx + 1).trim()
+            if (name.equals("Authorization", ignoreCase = true)) return@forEach
+            try {
+                builder.removeAll(name)
+                builder.add(name, value)
+            } catch (_: IllegalArgumentException) {
+                // Invalid names/values are rejected in the preference validator.
+            }
+        }
+    return builder.build()
+}
+
+internal fun isValidCustomHttpHeaders(raw: String): Boolean {
+    raw.lineSequence()
+        .map { it.trim() }
+        .filter { it.isNotEmpty() && !it.startsWith("#") }
+        .forEach { line ->
+            val idx = line.indexOf(':')
+            if (idx <= 0) return false
+            val name = line.substring(0, idx).trim()
+            val value = line.substring(idx + 1).trim()
+            if (name.isEmpty()) return false
+            try {
+                Headers.Builder().add(name, value)
+            } catch (_: IllegalArgumentException) {
+                return false
+            }
+        }
+    return true
 }

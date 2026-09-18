@@ -75,6 +75,7 @@ import kotlinx.serialization.json.put
 import okhttp3.Dns
 import okhttp3.Headers
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -114,6 +115,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
     override val client: OkHttpClient =
         network.client.newBuilder()
             .dns(Dns.SYSTEM)
+            .addInterceptor { chain -> interceptCustomHeaders(chain) }
             .build()
 
     /**
@@ -2056,6 +2058,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             .add("User-Agent", "Tachiyomi Kavita v${AppInfo.getVersionName()}")
             .add("Content-Type", "application/json")
             .add("Authorization", "Bearer $jwtToken")
+            .addCustomHeaders()
     }
 
     private fun setupLoginHeaders(): Headers.Builder {
@@ -2063,6 +2066,30 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             .add("User-Agent", "Tachiyomi Kavita v${AppInfo.getVersionName()}")
             .add("Content-Type", "application/json")
             .add("Authorization", "Bearer $jwtToken")
+            .addCustomHeaders()
+    }
+
+    private fun Headers.Builder.addCustomHeaders(): Headers.Builder {
+        val extra = parseCustomHttpHeaders(preferences.customHeaders)
+        for (i in 0 until extra.size) {
+            val name = extra.name(i)
+            removeAll(name)
+            add(name, extra.value(i))
+        }
+        return this
+    }
+
+    /** Injects reverse-proxy headers into every request made through the source client. */
+    private fun interceptCustomHeaders(chain: Interceptor.Chain): Response {
+        val extra = parseCustomHttpHeaders(preferences.customHeaders)
+        if (extra.size == 0) {
+            return chain.proceed(chain.request())
+        }
+        val requestBuilder = chain.request().newBuilder()
+        for (i in 0 until extra.size) {
+            requestBuilder.header(extra.name(i), extra.value(i))
+        }
+        return chain.proceed(requestBuilder.build())
     }
 
     override fun setupPreferenceScreen(screen: PreferenceScreen) {
@@ -2092,6 +2119,18 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         }
         screen.addPreference(customSourceNamePref)
         screen.addPreference(opdsAddressPref)
+
+        screen.addEditTextPreference(
+            title = intl["pref_custom_headers_title"],
+            default = "",
+            summary = intl["pref_custom_headers_summary"],
+            dialogMessage = intl["pref_custom_headers_dialog"],
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE,
+            validate = ::isValidCustomHttpHeaders,
+            validationMessage = intl["pref_custom_headers_invalid"],
+            key = KavitaConstants.customHeadersPref,
+            restartRequired = true,
+        )
 
         SwitchPreferenceCompat(screen.context).apply {
             key = GROUP_TAGS_PREF
@@ -2319,6 +2358,9 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
 
     private val SharedPreferences.scanlatorFormat: String
         get() = getString(SCANLATOR_FORMAT_PREF, SCANLATOR_FORMAT_DEFAULT) ?: SCANLATOR_FORMAT_DEFAULT
+
+    private val SharedPreferences.customHeaders: String
+        get() = getString(KavitaConstants.customHeadersPref, "").orEmpty()
 
     // Library filtering preferences
     private val SharedPreferences.allowedLibrariesFeed: Set<String>
