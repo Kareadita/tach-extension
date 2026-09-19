@@ -74,6 +74,7 @@ import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.put
 import okhttp3.Dns
 import okhttp3.Headers
+import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -2080,9 +2081,9 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
     }
 
     /**
-     * Applies the reverse-proxy headers to requests aimed at the configured Kavita host and
+     * Applies the reverse-proxy headers to requests aimed at the configured Kavita origin and
      * removes them from anything else. Runs as a network interceptor so each redirect hop is
-     * checked, otherwise a redirect to another host would carry the credentials along.
+     * checked, otherwise a redirect elsewhere would carry the credentials along.
      */
     private fun interceptCustomHeaders(chain: Interceptor.Chain): Response {
         val request = chain.request()
@@ -2090,11 +2091,11 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         if (extra.size == 0) {
             return chain.proceed(request)
         }
-        val isServerHost = request.url.host.equals(preferences.serverHost, ignoreCase = true)
+        val isServerOrigin = request.url.isSameOriginAs(preferences.serverUrl)
         val requestBuilder = request.newBuilder()
         for (i in 0 until extra.size) {
             val name = extra.name(i)
-            if (isServerHost) {
+            if (isServerOrigin) {
                 requestBuilder.header(name, extra.value(i))
             } else {
                 requestBuilder.removeHeader(name)
@@ -2102,6 +2103,13 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         }
         return chain.proceed(requestBuilder.build())
     }
+
+    /** Compares scheme, host and effective port, so a downgrade or port change is not trusted. */
+    private fun HttpUrl.isSameOriginAs(other: HttpUrl?): Boolean =
+        other != null &&
+            scheme.equals(other.scheme, ignoreCase = true) &&
+            host.equals(other.host, ignoreCase = true) &&
+            port == other.port
 
     override fun setupPreferenceScreen(screen: PreferenceScreen) {
         val opdsAddressPref = screen.editTextPreference(
@@ -2372,12 +2380,11 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
     private val SharedPreferences.customHeaders: String
         get() = getString(KavitaConstants.customHeadersPref, "").orEmpty()
 
-    /** Host of the configured Kavita server, read fresh so it survives setup order. */
-    private val SharedPreferences.serverHost: String?
+    /** URL of the configured Kavita server, read fresh so it survives setup order. */
+    private val SharedPreferences.serverUrl: HttpUrl?
         get() = getString("BASEURL", "").orEmpty()
             .ifBlank { getString(ADDRESS_TITLE, "").orEmpty() }
             .toHttpUrlOrNull()
-            ?.host
 
     // Library filtering preferences
     private val SharedPreferences.allowedLibrariesFeed: Set<String>
