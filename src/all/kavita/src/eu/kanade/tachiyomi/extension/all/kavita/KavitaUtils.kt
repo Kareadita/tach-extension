@@ -126,6 +126,7 @@ internal fun isValidCustomHttpHeaders(raw: String): Boolean {
             val name = line.substring(0, idx).trim()
             val value = line.substring(idx + 1).trim()
             if (name.isEmpty()) return false
+            if (name.equals("Authorization", ignoreCase = true)) return false
             try {
                 Headers.Builder().add(name, value)
             } catch (_: IllegalArgumentException) {

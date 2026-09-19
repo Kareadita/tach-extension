@@ -115,7 +115,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
     override val client: OkHttpClient =
         network.client.newBuilder()
             .dns(Dns.SYSTEM)
-            .addInterceptor { chain -> interceptCustomHeaders(chain) }
+            .addNetworkInterceptor { chain -> interceptCustomHeaders(chain) }
             .build()
 
     /**
@@ -2079,15 +2079,26 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         return this
     }
 
-    /** Injects reverse-proxy headers into every request made through the source client. */
+    /**
+     * Applies the reverse-proxy headers to requests aimed at the configured Kavita host and
+     * removes them from anything else. Runs as a network interceptor so each redirect hop is
+     * checked, otherwise a redirect to another host would carry the credentials along.
+     */
     private fun interceptCustomHeaders(chain: Interceptor.Chain): Response {
+        val request = chain.request()
         val extra = parseCustomHttpHeaders(preferences.customHeaders)
         if (extra.size == 0) {
-            return chain.proceed(chain.request())
+            return chain.proceed(request)
         }
-        val requestBuilder = chain.request().newBuilder()
+        val isServerHost = request.url.host.equals(preferences.serverHost, ignoreCase = true)
+        val requestBuilder = request.newBuilder()
         for (i in 0 until extra.size) {
-            requestBuilder.header(extra.name(i), extra.value(i))
+            val name = extra.name(i)
+            if (isServerHost) {
+                requestBuilder.header(name, extra.value(i))
+            } else {
+                requestBuilder.removeHeader(name)
+            }
         }
         return chain.proceed(requestBuilder.build())
     }
@@ -2129,7 +2140,6 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             validate = ::isValidCustomHttpHeaders,
             validationMessage = intl["pref_custom_headers_invalid"],
             key = KavitaConstants.customHeadersPref,
-            restartRequired = true,
         )
 
         SwitchPreferenceCompat(screen.context).apply {
@@ -2361,6 +2371,13 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
 
     private val SharedPreferences.customHeaders: String
         get() = getString(KavitaConstants.customHeadersPref, "").orEmpty()
+
+    /** Host of the configured Kavita server, read fresh so it survives setup order. */
+    private val SharedPreferences.serverHost: String?
+        get() = getString("BASEURL", "").orEmpty()
+            .ifBlank { getString(ADDRESS_TITLE, "").orEmpty() }
+            .toHttpUrlOrNull()
+            ?.host
 
     // Library filtering preferences
     private val SharedPreferences.allowedLibrariesFeed: Set<String>
