@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.extension.all.kavita.dto
 
+import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.Serializable
 import kotlin.Triple
 
@@ -47,7 +48,9 @@ data class FilterStatementDto(
 
 @Serializable
 data class SortOptions(
+    @EncodeDefault(EncodeDefault.Mode.ALWAYS)
     var sortField: Int = SortFieldEnum.AverageRating.type,
+    @EncodeDefault(EncodeDefault.Mode.ALWAYS)
     var isAscending: Boolean = true,
 )
 
