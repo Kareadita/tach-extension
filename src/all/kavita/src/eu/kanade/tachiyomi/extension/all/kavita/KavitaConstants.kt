@@ -9,6 +9,7 @@ object KavitaConstants {
     const val SPECIAL_NUMBER_OFFSET = 10000000000f
 
     const val customSourceNamePref = "customSourceName"
+    const val customHeadersPref = "customHttpHeaders"
     const val noSmartFilterSelected = "No smart filter loaded"
 
     // Template formatting preferences

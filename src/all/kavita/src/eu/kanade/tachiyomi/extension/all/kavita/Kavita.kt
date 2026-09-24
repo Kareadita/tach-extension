@@ -74,7 +74,9 @@ import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.put
 import okhttp3.Dns
 import okhttp3.Headers
+import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -114,6 +116,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
     override val client: OkHttpClient =
         network.client.newBuilder()
             .dns(Dns.SYSTEM)
+            .addNetworkInterceptor { chain -> interceptCustomHeaders(chain) }
             .build()
 
     /**
@@ -2056,6 +2059,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             .add("User-Agent", "Tachiyomi Kavita v${AppInfo.getVersionName()}")
             .add("Content-Type", "application/json")
             .add("Authorization", "Bearer $jwtToken")
+            .addCustomHeaders()
     }
 
     private fun setupLoginHeaders(): Headers.Builder {
@@ -2063,7 +2067,49 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             .add("User-Agent", "Tachiyomi Kavita v${AppInfo.getVersionName()}")
             .add("Content-Type", "application/json")
             .add("Authorization", "Bearer $jwtToken")
+            .addCustomHeaders()
     }
+
+    private fun Headers.Builder.addCustomHeaders(): Headers.Builder {
+        val extra = parseCustomHttpHeaders(preferences.customHeaders)
+        for (i in 0 until extra.size) {
+            val name = extra.name(i)
+            removeAll(name)
+            add(name, extra.value(i))
+        }
+        return this
+    }
+
+    /**
+     * Applies the reverse-proxy headers to requests aimed at the configured Kavita origin and
+     * removes them from anything else. Runs as a network interceptor so each redirect hop is
+     * checked, otherwise a redirect elsewhere would carry the credentials along.
+     */
+    private fun interceptCustomHeaders(chain: Interceptor.Chain): Response {
+        val request = chain.request()
+        val extra = parseCustomHttpHeaders(preferences.customHeaders)
+        if (extra.size == 0) {
+            return chain.proceed(request)
+        }
+        val isServerOrigin = request.url.isSameOriginAs(preferences.serverUrl)
+        val requestBuilder = request.newBuilder()
+        for (i in 0 until extra.size) {
+            val name = extra.name(i)
+            if (isServerOrigin) {
+                requestBuilder.header(name, extra.value(i))
+            } else {
+                requestBuilder.removeHeader(name)
+            }
+        }
+        return chain.proceed(requestBuilder.build())
+    }
+
+    /** Compares scheme, host and effective port, so a downgrade or port change is not trusted. */
+    private fun HttpUrl.isSameOriginAs(other: HttpUrl?): Boolean =
+        other != null &&
+            scheme.equals(other.scheme, ignoreCase = true) &&
+            host.equals(other.host, ignoreCase = true) &&
+            port == other.port
 
     override fun setupPreferenceScreen(screen: PreferenceScreen) {
         val opdsAddressPref = screen.editTextPreference(
@@ -2092,6 +2138,17 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         }
         screen.addPreference(customSourceNamePref)
         screen.addPreference(opdsAddressPref)
+
+        screen.addEditTextPreference(
+            title = intl["pref_custom_headers_title"],
+            default = "",
+            summary = intl["pref_custom_headers_summary"],
+            dialogMessage = intl["pref_custom_headers_dialog"],
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE,
+            validate = ::isValidCustomHttpHeaders,
+            validationMessage = intl["pref_custom_headers_invalid"],
+            key = KavitaConstants.customHeadersPref,
+        )
 
         SwitchPreferenceCompat(screen.context).apply {
             key = GROUP_TAGS_PREF
@@ -2319,6 +2376,15 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
 
     private val SharedPreferences.scanlatorFormat: String
         get() = getString(SCANLATOR_FORMAT_PREF, SCANLATOR_FORMAT_DEFAULT) ?: SCANLATOR_FORMAT_DEFAULT
+
+    private val SharedPreferences.customHeaders: String
+        get() = getString(KavitaConstants.customHeadersPref, "").orEmpty()
+
+    /** URL of the configured Kavita server, read fresh so it survives setup order. */
+    private val SharedPreferences.serverUrl: HttpUrl?
+        get() = getString("BASEURL", "").orEmpty()
+            .ifBlank { getString(ADDRESS_TITLE, "").orEmpty() }
+            .toHttpUrlOrNull()
 
     // Library filtering preferences
     private val SharedPreferences.allowedLibrariesFeed: Set<String>
