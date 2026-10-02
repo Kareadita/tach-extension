@@ -1728,8 +1728,10 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                 }
             }
 
-            // 1.0 (Chapter) > 0.0001 (Volume) > 0.00001 (Special)
-            return allChapters.sortedByDescending { it.chapter_number }
+            // Kavita returns ascending reading order; Mihon expects newest-first.
+            // Reverse first so chapter_number ties (all specials share -2) end up in
+            // reverse server order.
+            return allChapters.asReversed().sortedByDescending { it.chapter_number }
         } catch (e: Exception) {
             Log.e(LOG_TAG, "Unhandled exception parsing chapters", e)
             throw IOException(intl["version_exceptions_chapters_parse"])
