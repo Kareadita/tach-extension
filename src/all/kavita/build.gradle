@@ -2,7 +2,7 @@ ext {
     kmkVersionCode = 1
     extName = 'Kavita'
     extClass = '.KavitaFactory'
-    extVersionCode = 24
+    extVersionCode = 25
     isNsfw = false
 }
 

@@ -6,7 +6,7 @@ import kotlin.Triple
 
 @Serializable
 data class FilterV2Dto(
-    val id: Int? = null,
+    val id: Int = 0,
     val name: String? = null,
     val statements: MutableList<FilterStatementDto> = mutableListOf(),
     val combination: Int = FilterCombination.And.ordinal,
@@ -65,6 +65,7 @@ enum class SortFieldEnum(val type: Int) {
     ReadProgress(7),
     AverageRating(8),
     Random(9),
+    UserRating(10),
     ;
 
     companion object {
