@@ -65,6 +65,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.decodeFromString
@@ -74,7 +75,6 @@ import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.put
 import okhttp3.Dns
 import okhttp3.Headers
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -91,6 +91,8 @@ import java.security.MessageDigest
 import java.util.Calendar
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.let
 import kotlin.runCatching
@@ -132,16 +134,34 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
     override val name = "${KavitaInt.KAVITA_NAME} (${preferences.getString(KavitaConstants.customSourceNamePref, suffix)})"
     override val lang = "all"
     override val supportsLatest = true
-    private val apiUrl: String by lazy { getPrefApiUrl() }
-    private val apiKey: String by lazy { getPrefApiKey() }
-    override val baseUrl by lazy { getPrefBaseUrl() }
-    private val address by lazy { getPrefAddress() } // Address for the Kavita OPDS url. Should be http(s)://host:(port)/api/opds/api-key
-    private var jwtToken = "" // * JWT Token for authentication with the server. Stored in memory.
+
+    private val apiUrl: String get() = getPrefApiUrl()
+    private val apiKey: String get() = getPrefApiKey()
+    override val baseUrl: String get() = getPrefBaseUrl()
+    private val address: String get() = getPrefAddress() // http(s)://host[:port][/path]/api/opds/<api-key>
+
+    @Volatile
+    private var jwtToken = ""
     private val LOG_TAG = """Kavita_${"[$suffix]_" + preferences.getString(KavitaConstants.customSourceNamePref, "[$suffix]")!!.replace(' ', '_')}"""
-    private var isLogged = false // Used to know if login was correct and not send login requests anymore
+
+    @Volatile
+    private var isLogged = false
+
+    /** Serializes concurrent login attempts (network I/O runs while holding this lock). */
+    private val loginLock = Any()
+
+    /** Tiny lock for check-and-set of [jwtToken] / [isLogged]. */
+    private val tokenLock = Any()
+
+    /** Bumped when OPDS settings change so in-flight logins are discarded. Not taken under [loginLock]. */
+    private val loginGeneration = AtomicInteger(0)
+
+    /** Single-flight guard for search-triggered metadata reload. */
+    private val metadataReloading = AtomicBoolean(false)
     private val json: Json by injectLazy()
 
-    // Act as a cache
+    // Act as a cache — cleared on OPDS URL change so a server switch does not keep old data.
+    @Volatile
     private var series = emptyList<SeriesDto>()
     private val libraryTypeCache = mutableMapOf<Int, LibraryTypeEnum>()
 
@@ -421,8 +441,20 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
 
     override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
         if (genresListMeta.isEmpty() || tagsListMeta.isEmpty()) {
-            Log.w(LOG_TAG, "Metadata not loaded, retrying filters")
-            getFilterList() // Re-initialize metadata
+            Log.w(LOG_TAG, "Metadata not loaded yet; scheduling reload")
+            // Empty lists can also mean a healthy server with no tags — still only
+            // one in-flight reload so every search does not stampede Plugin/authenticate.
+            if (apiUrl.isNotBlank() && metadataReloading.compareAndSet(false, true)) {
+                scope.launch {
+                    try {
+                        loadSourceMetadata()
+                    } catch (e: Exception) {
+                        Log.e(LOG_TAG, "Metadata reload from search failed", e)
+                    } finally {
+                        metadataReloading.set(false)
+                    }
+                }
+            }
         }
 
         val specialListFilter = filters.find { it is SpecialListFilter } as? SpecialListFilter
@@ -1953,15 +1985,34 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
      **/
 
     /** Some variable names already exist. im not good at naming add Meta suffix */
+    @Volatile
     private var genresListMeta = emptyList<MetadataGenres>()
+
+    @Volatile
     private var tagsListMeta = emptyList<MetadataTag>()
+
+    @Volatile
     private var ageRatingsListMeta = emptyList<MetadataAgeRatings>()
+
+    @Volatile
     private var peopleListMeta = emptyList<MetadataPeople>()
+
+    @Volatile
     private var pubStatusListMeta = emptyList<MetadataPubStatus>()
+
+    @Volatile
     private var languagesListMeta = emptyList<MetadataLanguages>()
+
+    @Volatile
     private var libraryListMeta = emptyList<MetadataLibrary>()
+
+    @Volatile
     private var collectionsListMeta = emptyList<MetadataCollections>()
+
+    @Volatile
     private var smartFilters = emptyList<SmartFilter>()
+
+    @Volatile
     private var cachedReadingLists: List<ReadingListDto> = emptyList()
 
     /**
@@ -2029,10 +2080,6 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         constructor(cause: Throwable) : this(null, cause)
     }
 
-    class OpdsurlExistsInPref(message: String? = null, cause: Throwable? = null) : Exception(message, cause) {
-        constructor(cause: Throwable) : this(null, cause)
-    }
-
     class EmptyRequestBody(message: String? = null, cause: Throwable? = null) : Exception(message, cause) {
         constructor(cause: Throwable) : this(null, cause)
     }
@@ -2056,7 +2103,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         return Headers.Builder()
             .add("User-Agent", "Tachiyomi Kavita v${AppInfo.getVersionName()}")
             .add("Content-Type", "application/json")
-            .add("Authorization", "Bearer $jwtToken")
+            .add("Accept", "application/json")
     }
 
     override fun setupPreferenceScreen(screen: PreferenceScreen) {
@@ -2244,8 +2291,9 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         return EditTextPreference(context).apply {
             key = preKey
             this.title = title
-            val input = preferences.getString(title, null)
-            this.summary = if (input == null || input.isEmpty()) summary else input
+            val input = preferences.getString(preKey, null)
+            // Redact API key from the always-visible preference summary.
+            this.summary = if (input.isNullOrEmpty()) summary else OpdsUrlParser.redact(input)
             this.setDefaultValue(default)
             dialogTitle = title
 
@@ -2257,33 +2305,42 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             }
             setOnPreferenceChangeListener { _, newValue ->
                 try {
-                    val opdsUrlInPref = opdsUrlInPreferences(newValue.toString()) // We don't allow hot have multiple sources with same ip or domain
-                    if (opdsUrlInPref.isNotEmpty()) {
-                        // TODO("Add option to allow multiple sources with same url at the cost of tracking")
-                        preferences.edit().putString(title, "").apply()
+                    val url = newValue.toString()
+                    parseOpdsUrl(url)
 
+                    val opdsUrlInPref = opdsUrlInPreferences(url)
+                    if (opdsUrlInPref.isNotEmpty()) {
                         Toast.makeText(
                             context,
                             intl["pref_opds_duplicated_source_url"] + ": " + opdsUrlInPref,
                             Toast.LENGTH_LONG,
                         ).show()
-                        throw OpdsurlExistsInPref(intl["pref_opds_duplicated_source_url"] + opdsUrlInPref)
+                        return@setOnPreferenceChangeListener false
                     }
 
-                    val res = preferences.edit().putString(title, newValue as String).commit()
-                    Toast.makeText(
-                        context,
-                        intl["restartapp_settings"],
-                        Toast.LENGTH_LONG,
-                    ).show()
-                    setupLogin(newValue)
+                    applyOpdsUrlChange(url)
+                    scope.launch {
+                        try {
+                            loadSourceMetadata()
+                        } catch (e: Exception) {
+                            Log.e(LOG_TAG, "Failed to reload metadata after OPDS change", e)
+                        }
+                    }
+                    val normalized = preferences.getString(ADDRESS_TITLE, url) ?: url
+                    // Never put the API key in the settings summary (undercuts log redaction).
+                    this.summary = OpdsUrlParser.redact(normalized)
+                    // Keep dialog text in sync; Preference framework may otherwise keep the old value.
+                    this.text = normalized
                     Log.v(LOG_TAG, "[Preferences] Successfully modified OPDS URL")
-                    res
-                } catch (e: OpdsurlExistsInPref) {
-                    Log.e(LOG_TAG, "Url exists in a different sourcce")
+                    // false: Preference must not persist the raw value over setupLogin's normalized Address.
                     false
                 } catch (e: Exception) {
-                    Log.e(LOG_TAG, "Unrecognised error", e)
+                    Log.e(LOG_TAG, "OPDS URL rejected", e)
+                    Toast.makeText(
+                        context,
+                        e.message ?: intl["pref_opds_badformed_url"],
+                        Toast.LENGTH_LONG,
+                    ).show()
                     false
                 }
             }
@@ -2438,19 +2495,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                 .putString(SCANLATOR_FORMAT_PREF, currentScanlatorFormat ?: KavitaConstants.SCANLATOR_FORMAT_DEFAULT)
                 .commit()
 
-            // Reset all in-memory state (for debug)
-//            jwtToken = ""
-//            isLogged = false
-//            genresListMeta = emptyList()
-//            tagsListMeta = emptyList()
-//            ageRatingsListMeta = emptyList()
-//            peopleListMeta = emptyList()
-//            pubStatusListMeta = emptyList()
-//            languagesListMeta = emptyList()
-//            libraryListMeta = emptyList()
-//            collectionsListMeta = emptyList()
-//            smartFilters = emptyList()
-//            cachedReadingLists = emptyList()
+            invalidateSession()
 
             Log.d(LOG_TAG, "Successfully reset all OPDS URLs and preferences")
         } catch (e: Exception) {
@@ -2460,12 +2505,15 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
     }
 
     private fun getPrefApiKey(): String {
-        // http(s)://host:(port)/api/opds/api-key
         val existingKey = preferences.getString(APIKEY, "")
         if (!existingKey.isNullOrEmpty()) return existingKey
-        val address = preferences.getString(ADDRESS_TITLE, "") ?: ""
-        val parts = address.split("/opds/")
-        return if (parts.size > 1) parts[1] else ""
+        val stored = preferences.getString(ADDRESS_TITLE, "") ?: ""
+        if (stored.isEmpty()) return ""
+        return try {
+            parseOpdsUrl(stored).apiKey
+        } catch (_: Exception) {
+            ""
+        }
     }
 
     companion object {
@@ -2501,7 +2549,11 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
      * This is a limitation needed for tracking.
      * **/
     private fun opdsUrlInPreferences(url: String): String {
-        fun getCleanedApiUrl(url: String): String = "${url.split("/api/").first()}/api"
+        val candidateApiUrl = try {
+            parseOpdsUrl(url).apiUrl
+        } catch (_: Exception) {
+            return ""
+        }
 
         for (sourceId in 1..3) { // There's 3 sources so 3 preferences to check
             val sourceSuffixID by lazy {
@@ -2516,7 +2568,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             val prefApiUrl = preferences.getString("APIURL", "")!!
 
             if (prefApiUrl.isNotEmpty()) {
-                if (prefApiUrl == getCleanedApiUrl(url)) {
+                if (prefApiUrl.equals(candidateApiUrl, ignoreCase = true)) {
                     if (sourceId.toString() != suffix) {
                         return preferences.getString(KavitaConstants.customSourceNamePref, sourceId.toString())!!
                     }
@@ -2526,193 +2578,326 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         return ""
     }
 
-    /**
-     * LOGIN
-     * **/
+    private fun parseOpdsUrl(raw: String): OpdsUrlParser.Parsed =
+        try {
+            OpdsUrlParser.parse(raw)
+        } catch (e: OpdsUrlParser.ParseException.MissingScheme) {
+            throw IOException(intl["login_errors_missing_scheme"], e)
+        } catch (e: OpdsUrlParser.ParseException.InvalidUrl) {
+            throw IOException("${intl["login_errors_invalid_url"]} ${e.value}", e)
+        } catch (e: OpdsUrlParser.ParseException) {
+            throw IOException(intl["pref_opds_badformed_url"], e)
+        }
+
     private fun setupLogin(addressFromPreference: String = "") {
         Log.v(LOG_TAG, "[Setup Login] Starting setup")
-        val validAddress = address.ifEmpty { addressFromPreference }
-        val tokens = validAddress.split("/api/opds/")
-        val apiKey = tokens[1]
-        val baseUrlSetup = tokens[0].replace("\n", "\\n")
-
-        if (baseUrlSetup.toHttpUrlOrNull() == null) {
-            Log.e(LOG_TAG, "Invalid URL $baseUrlSetup")
-            throw Exception("${intl["login_errors_invalid_url"]}: $baseUrlSetup")
+        val validAddress = addressFromPreference.ifEmpty { address }
+        if (validAddress.isEmpty()) {
+            throw IOException(intl["pref_opds_must_setup_address"])
         }
-        preferences.edit().putString("BASEURL", baseUrlSetup).apply()
-        preferences.edit().putString("APIKEY", apiKey).apply()
-        preferences.edit().putString("APIURL", "$baseUrlSetup/api").apply()
+        val parsed = parseOpdsUrl(validAddress)
+
+        preferences.edit()
+            .putString("BASEURL", parsed.serverBase)
+            .putString("APIKEY", parsed.apiKey)
+            .putString("APIURL", parsed.apiUrl)
+            .putString(ADDRESS_TITLE, parsed.normalizedAddress)
+            .apply()
         Log.v(LOG_TAG, "[Setup Login] Setup successful")
     }
 
+    /** Clears session state without modifying Address prefs. */
+    private fun invalidateSession() {
+        synchronized(tokenLock) {
+            jwtToken = ""
+            isLogged = false
+            loginGeneration.incrementAndGet()
+        }
+        clearMemoryCaches()
+        Log.d(LOG_TAG, "Session and caches invalidated")
+    }
+
+    private fun clearMemoryCaches() {
+        series = emptyList()
+        libraryTypeCache.clear()
+        metadataCache.clear()
+        genresListMeta = emptyList()
+        tagsListMeta = emptyList()
+        ageRatingsListMeta = emptyList()
+        peopleListMeta = emptyList()
+        pubStatusListMeta = emptyList()
+        languagesListMeta = emptyList()
+        libraryListMeta = emptyList()
+        collectionsListMeta = emptyList()
+        smartFilters = emptyList()
+        cachedReadingLists = emptyList()
+    }
+
+    /**
+     * Persist a new OPDS URL and drop the current session/caches in one place.
+     * Prefs write + token clear + generation bump are atomic under [tokenLock] so an
+     * in-flight login cannot observe mixed old/new state. Does not take [loginLock]
+     * — safe to call from the preference listener on the main thread.
+     */
+    private fun applyOpdsUrlChange(url: String) {
+        synchronized(tokenLock) {
+            setupLogin(url)
+            jwtToken = ""
+            isLogged = false
+            loginGeneration.incrementAndGet()
+        }
+        clearMemoryCaches()
+        Log.d(LOG_TAG, "Session and caches cleared after OPDS change")
+    }
+
+    /**
+     * Authenticate against Plugin/authenticate.
+     * Callers that need a fresh token after expiry must clear [jwtToken] first;
+     * otherwise an already-logged session is a no-op.
+     *
+     * Concurrent attempts are serialized on [loginLock] (network I/O runs while holding
+     * that lock). The preference listener never takes [loginLock], so OPDS edits cannot
+     * ANR the UI. [loginGeneration] is an AtomicInteger; token and generation updates
+     * are done under [tokenLock] together with the prefs snapshot used for the request.
+     */
     private fun doLogin() {
-        Log.d(LOG_TAG, "Attempting login with address: ${address.takeIf { it.isNotEmpty() } ?: "EMPTY"}")
+        synchronized(tokenLock) {
+            if (jwtToken.isNotEmpty() && isLogged) return
+        }
+
+        Log.d(LOG_TAG, "Attempting login with address: ${OpdsUrlParser.redact(address).ifEmpty { "EMPTY" }}")
         if (address.isEmpty()) {
             Log.e(LOG_TAG, "OPDS URL is empty or null")
             throw IOException(intl["pref_opds_must_setup_address"])
         }
-        if (address.split("/opds/").size != 2) {
-            throw IOException(intl["pref_opds_badformed_url"])
+        parseOpdsUrl(address)
+
+        // Snapshot generation + API base + key under tokenLock so they stay consistent
+        // with each other for the duration of this attempt.
+        val (generation, snapshotApiUrl, snapshotKey) = synchronized(tokenLock) {
+            if (jwtToken.isEmpty()) setupLogin()
+            Triple(loginGeneration.get(), apiUrl, getPrefKey())
         }
-        if (jwtToken.isEmpty()) setupLogin()
-        Log.v(LOG_TAG, "[Login] Starting login")
-        val request = POST(
-            "$apiUrl/Plugin/authenticate?apiKey=${getPrefKey()}&pluginName=Tachiyomi-Kavita",
-            setupLoginHeaders().build(),
-            "{}".toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull()),
-        )
-        // Don't auto-follow redirects here: OkHttp downgrades POST to GET on a 301/302,
-        // which then 404s against this POST-only endpoint and hides the real cause (a
-        // reverse proxy redirecting, usually over a http/https or port mismatch).
+
+        // OkHttp must not auto-follow redirects: a 301/302 would rewrite this POST into a
+        // GET, Kavita only allows POST on Plugin/authenticate, and the server log then
+        // shows a 404 GET — the failure mode reported in Kareadita/tach-extension#54.
         val noRedirectClient = client.newBuilder()
             .followRedirects(false)
             .followSslRedirects(false)
             .build()
-        noRedirectClient.newCall(request).execute().use {
-            val peekbody = it.peekBody(Long.MAX_VALUE).toString()
 
-            if (it.code == 200) {
-                try {
-                    jwtToken = it.parseAs<AuthenticationDto>().token
-                    isLogged = true
-                } catch (e: Exception) {
-                    Log.e(LOG_TAG, "Possible outdated kavita", e)
-                    throw IOException(intl["login_errors_parse_tokendto"])
+        synchronized(loginLock) {
+            // Re-check under lock: a concurrent login may have already completed.
+            synchronized(tokenLock) {
+                if (jwtToken.isNotEmpty() && isLogged && generation == loginGeneration.get()) return
+                if (generation != loginGeneration.get()) {
+                    Log.w(LOG_TAG, "[Login] settings changed before request; aborting")
+                    throw LoginErrorException(intl["login_errors_settings_changed"])
                 }
-            } else if (it.code in 300..399) {
-                val location = it.header("Location") ?: "(no Location header)"
-                Log.e(LOG_TAG, "[LOGIN] login request was redirected -> Code: ${it.code}. Location: $location")
-                throw LoginErrorException("${intl["login_errors_redirected"]} $location")
-            } else {
-                if (it.code == 500) {
-                    Log.e(LOG_TAG, "[LOGIN] login failed. There was some error -> Code: ${it.code}.Response message: ${it.message} Response body: $peekbody.")
-                    throw LoginErrorException(intl["login_errors_failed_login"])
-                } else {
-                    Log.e(LOG_TAG, "[LOGIN] login failed. Authentication was not successful -> Code: ${it.code}.Response message: ${it.message} Response body: $peekbody.")
-                    throw LoginErrorException(intl["login_errors_failed_login"])
+            }
+
+            var attemptUrl = OpdsUrlParser.buildAuthenticateUrl(snapshotApiUrl, snapshotKey)
+            var redirectedOnce = false
+            // Hold redirect correction until the retry succeeds and generation is still current.
+            var pendingApiUrl: String? = null
+            var pendingBaseUrl: String? = null
+            var pendingAddress: String? = null
+            repeat(2) {
+                Log.v(LOG_TAG, "[Login] POST ${OpdsUrlParser.redact(attemptUrl)}")
+                val request = POST(
+                    attemptUrl,
+                    setupLoginHeaders().build(),
+                    "{}".toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull()),
+                )
+                noRedirectClient.newCall(request).execute().use { response ->
+                    when {
+                        response.isSuccessful -> {
+                            val token = try {
+                                response.parseAs<AuthenticationDto>().token
+                            } catch (e: Exception) {
+                                Log.e(LOG_TAG, "Possible outdated kavita", e)
+                                throw IOException(intl["login_errors_parse_tokendto"])
+                            }
+                            val stale = synchronized(tokenLock) {
+                                if (generation != loginGeneration.get()) {
+                                    true
+                                } else {
+                                    val api = pendingApiUrl
+                                    val base = pendingBaseUrl
+                                    val addr = pendingAddress
+                                    if (api != null && base != null && addr != null) {
+                                        preferences.edit()
+                                            .putString("APIURL", api)
+                                            .putString("BASEURL", base)
+                                            .putString(ADDRESS_TITLE, addr)
+                                            .apply()
+                                    }
+                                    jwtToken = token
+                                    isLogged = true
+                                    false
+                                }
+                            }
+                            if (stale) {
+                                Log.w(LOG_TAG, "[Login] discarding stale login result")
+                                throw LoginErrorException(intl["login_errors_settings_changed"])
+                            }
+                            Log.v(LOG_TAG, "[Login] Login successful")
+                            return
+                        }
+                        response.code in 300..399 -> {
+                            val location = response.header("Location")
+                                ?: throw LoginErrorException("${intl["login_errors_redirected"]} (no Location header)")
+                            val redactedLocation = OpdsUrlParser.redact(location)
+                            Log.w(LOG_TAG, "[LOGIN] ${response.code} redirect -> $redactedLocation")
+                            if (redirectedOnce) {
+                                throw LoginErrorException("${intl["login_errors_redirected"]} $redactedLocation")
+                            }
+                            val correctedApi = OpdsUrlParser.resolveRedirectedApiUrl(attemptUrl, location)
+                                ?: throw LoginErrorException("${intl["login_errors_redirected"]} $redactedLocation")
+                            val base = correctedApi.removeSuffix("/api").removeSuffix("/")
+                            pendingApiUrl = correctedApi
+                            pendingBaseUrl = base
+                            pendingAddress = "$base/api/opds/$snapshotKey"
+                            attemptUrl = OpdsUrlParser.buildAuthenticateUrl(correctedApi, snapshotKey)
+                            redirectedOnce = true
+                        }
+                        else -> {
+                            val bodyPreview = try {
+                                response.peekBody(512).string()
+                            } catch (_: Exception) {
+                                ""
+                            }
+                            Log.e(
+                                LOG_TAG,
+                                "[LOGIN] failed code=${response.code} message=${response.message} body=${OpdsUrlParser.redact(bodyPreview)}",
+                            )
+                            throw LoginErrorException(
+                                "${intl["login_errors_failed_login"]} (HTTP ${response.code})",
+                            )
+                        }
+                    }
                 }
             }
         }
-        Log.v(LOG_TAG, "[Login] Login successful")
     }
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    // Add initialization state tracking
-    private var isInitialized = false
-    private var initializationError: Exception? = null
+    /**
+     * Login and load filter/metadata lists for the current server.
+     * Called from [init] and again after an OPDS URL change so the filter UI is not left empty.
+     * Assignments are gated on [loginGeneration] so a stale load from a previous server cannot
+     * repopulate lists after [applyOpdsUrlChange].
+     */
+    private suspend fun loadSourceMetadata() {
+        val generation = loginGeneration.get()
+        if (apiUrl.isBlank()) {
+            Log.w(LOG_TAG, "API URL is blank, skipping metadata load")
+            return
+        }
+        Log.d(LOG_TAG, "Starting Kavita source metadata load (gen=$generation)")
+
+        try {
+            doLogin()
+        } catch (e: Exception) {
+            Log.e(LOG_TAG, "Login failed during metadata load", e)
+            return
+        }
+        if (generation != loginGeneration.get()) {
+            Log.w(LOG_TAG, "Discarding metadata load after OPDS change (gen=$generation)")
+            return
+        }
+
+        // Snapshot apiUrl after login (redirect may have corrected it).
+        val baseApi = apiUrl
+
+        fun <T> loadIfCurrent(label: String, block: () -> T): T? {
+            if (generation != loginGeneration.get()) return null
+            return try {
+                block().also { Log.d(LOG_TAG, "Loaded $label") }
+            } catch (e: Exception) {
+                Log.e(LOG_TAG, "Failed to load $label", e)
+                null
+            }
+        }
+
+        coroutineScope {
+            val deferredFilters = listOf(
+                async {
+                    loadIfCurrent("genres") {
+                        loadMetadata<List<MetadataGenres>>("$baseApi/Metadata/genres", generation)
+                    }?.let { if (generation == loginGeneration.get()) genresListMeta = it }
+                },
+                async {
+                    loadIfCurrent("tags") {
+                        loadMetadata<List<MetadataTag>>("$baseApi/Metadata/tags", generation)
+                    }?.let { if (generation == loginGeneration.get()) tagsListMeta = it }
+                },
+                async {
+                    loadIfCurrent("age ratings") {
+                        loadMetadata<List<MetadataAgeRatings>>("$baseApi/Metadata/age-ratings", generation)
+                    }?.let { if (generation == loginGeneration.get()) ageRatingsListMeta = it }
+                },
+                async {
+                    loadIfCurrent("collections") {
+                        loadMetadata<List<MetadataCollections>>("$baseApi/Collection", generation)
+                    }?.let { if (generation == loginGeneration.get()) collectionsListMeta = it }
+                },
+                async {
+                    loadIfCurrent("languages") {
+                        loadMetadata<List<MetadataLanguages>>("$baseApi/Metadata/languages", generation)
+                    }?.let { if (generation == loginGeneration.get()) languagesListMeta = it }
+                },
+                async {
+                    loadIfCurrent("libraries") {
+                        loadMetadata<List<MetadataLibrary>>("$baseApi/Library/libraries", generation)
+                    }?.let { if (generation == loginGeneration.get()) libraryListMeta = it }
+                },
+                async {
+                    loadIfCurrent("people") {
+                        loadMetadata<List<MetadataPeople>>("$baseApi/Metadata/people", generation)
+                    }?.let { if (generation == loginGeneration.get()) peopleListMeta = it }
+                },
+                async {
+                    loadIfCurrent("publication statuses") {
+                        loadMetadata<List<MetadataPubStatus>>("$baseApi/Metadata/publication-status", generation)
+                    }?.let { if (generation == loginGeneration.get()) pubStatusListMeta = it }
+                },
+                async {
+                    loadIfCurrent("smart filters") {
+                        loadMetadata<List<SmartFilter>>("$baseApi/filter", generation)
+                    }?.let { if (generation == loginGeneration.get()) smartFilters = it }
+                },
+            )
+            deferredFilters.awaitAll()
+        }
+
+        if (generation != loginGeneration.get()) {
+            Log.w(LOG_TAG, "Discarding post-load work after OPDS change (gen=$generation)")
+            return
+        }
+
+        try {
+            val serverInfoDto = client.newCall(GET("$baseApi/Server/server-info-slim", headersBuilder().build()))
+                .execute()
+                .parseAs<ServerInfoDto>()
+            Log.d(LOG_TAG, "Kavita version: ${serverInfoDto.kavitaVersion}")
+        } catch (e: Exception) {
+            Log.e(LOG_TAG, "Failed to get server info", e)
+        }
+        if (generation == loginGeneration.get()) {
+            Log.d(LOG_TAG, "Kavita source metadata load completed (gen=$generation)")
+        }
+    }
 
     init {
         if (apiUrl.isNotBlank()) {
             scope.launch {
                 try {
-                    Log.d(LOG_TAG, "Starting Kavita extension initialization")
-
-                    try {
-                        doLogin()
-                    } catch (e: Exception) {
-                        Log.e(LOG_TAG, "Login failed during initialization", e)
-                        initializationError = e
-                        return@launch
-                    }
-
-                    // Load all filters in parallel with error handling
-                    val deferredFilters = listOf(
-                        async {
-                            try {
-                                genresListMeta = loadMetadata("$apiUrl/Metadata/genres")
-                                Log.d(LOG_TAG, "Loaded ${genresListMeta.size} genres")
-                            } catch (e: Exception) {
-                                Log.e(LOG_TAG, "Failed to load genres", e)
-                            }
-                        },
-                        async {
-                            try {
-                                tagsListMeta = loadMetadata("$apiUrl/Metadata/tags")
-                                Log.d(LOG_TAG, "Loaded ${tagsListMeta.size} tags")
-                            } catch (e: Exception) {
-                                Log.e(LOG_TAG, "Failed to load tags", e)
-                            }
-                        },
-                        async {
-                            try {
-                                ageRatingsListMeta = loadMetadata("$apiUrl/Metadata/age-ratings")
-                                Log.d(LOG_TAG, "Loaded ${ageRatingsListMeta.size} age ratings")
-                            } catch (e: Exception) {
-                                Log.e(LOG_TAG, "Failed to load age ratings", e)
-                            }
-                        },
-                        async {
-                            try {
-                                collectionsListMeta = loadMetadata("$apiUrl/Collection")
-                                Log.d(LOG_TAG, "Loaded ${collectionsListMeta.size} collections")
-                            } catch (e: Exception) {
-                                Log.e(LOG_TAG, "Failed to load collections", e)
-                            }
-                        },
-                        async {
-                            try {
-                                languagesListMeta = loadMetadata("$apiUrl/Metadata/languages")
-                                Log.d(LOG_TAG, "Loaded ${languagesListMeta.size} languages")
-                            } catch (e: Exception) {
-                                Log.e(LOG_TAG, "Failed to load languages", e)
-                            }
-                        },
-                        async {
-                            try {
-                                libraryListMeta = loadMetadata("$apiUrl/Library/libraries")
-                                Log.d(LOG_TAG, "Loaded ${libraryListMeta.size} libraries")
-                            } catch (e: Exception) {
-                                Log.e(LOG_TAG, "Failed to load libraries", e)
-                            }
-                        },
-                        async {
-                            try {
-                                peopleListMeta = loadMetadata("$apiUrl/Metadata/people")
-                                Log.d(LOG_TAG, "Loaded ${peopleListMeta.size} people")
-                            } catch (e: Exception) {
-                                Log.e(LOG_TAG, "Failed to load people", e)
-                            }
-                        },
-                        async {
-                            try {
-                                pubStatusListMeta = loadMetadata("$apiUrl/Metadata/publication-status")
-                                Log.d(LOG_TAG, "Loaded ${pubStatusListMeta.size} publication statuses")
-                            } catch (e: Exception) {
-                                Log.e(LOG_TAG, "Failed to load publication statuses", e)
-                            }
-                        },
-                        async {
-                            try {
-                                smartFilters = loadMetadata("$apiUrl/filter")
-                                Log.d(LOG_TAG, "Loaded ${smartFilters.size} smart filters")
-                            } catch (e: Exception) {
-                                Log.e(LOG_TAG, "Failed to load smart filters", e)
-                            }
-                        },
-                    )
-
-                    deferredFilters.awaitAll()
-
-                    // Get server info with error handling
-                    try {
-                        val serverInfoDto = client.newCall(GET("$apiUrl/Server/server-info-slim", headersBuilder().build()))
-                            .execute()
-                            .parseAs<ServerInfoDto>()
-                        Log.d(LOG_TAG, "Kavita version: ${serverInfoDto.kavitaVersion}")
-
-                        // Mark as successfully initialized
-                        isInitialized = true
-                        Log.d(LOG_TAG, "Kavita extension initialization completed successfully")
-                    } catch (e: Exception) {
-                        Log.e(LOG_TAG, "Failed to get server info", e)
-                        // Don't fail initialization for server info
-                        isInitialized = true
-                    }
+                    loadSourceMetadata()
                 } catch (e: Exception) {
                     Log.e(LOG_TAG, "Critical initialization error", e)
-                    initializationError = e
                 }
             }
         } else {
@@ -2742,8 +2927,12 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         Log.d(LOG_TAG, "Cleanup completed - cache cleared")
     }
 
-    // Cached metadata loading with TTL
-    private inline fun <reified T> loadMetadata(url: String): T {
+    // Cached metadata loading with TTL.
+    // [expectedGeneration] when set: skip cache write if OPDS settings changed mid-fetch.
+    private inline fun <reified T> loadMetadata(
+        url: String,
+        expectedGeneration: Int? = null,
+    ): T {
         cleanupExpiredCache()
 
         val cacheKey = "${T::class.simpleName}_$url"
@@ -2761,7 +2950,11 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             .execute()
             .parseAs<T>()
 
-        metadataCache[cacheKey] = CacheEntry(data)
+        if (expectedGeneration == null || expectedGeneration == loginGeneration.get()) {
+            metadataCache[cacheKey] = CacheEntry(data)
+        } else {
+            Log.w(LOG_TAG, "Skipping cache write for ${T::class.simpleName} after OPDS change")
+        }
         return data
     }
 
