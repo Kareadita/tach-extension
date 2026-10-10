@@ -14,4 +14,9 @@ dependencies {
     implementation project(':lib:i18n')
     implementation(libs.commons.text)
 
+    // JVM unit tests (./gradlew :src:all:kavita:testDebugUnitTest) — not packaged into the APK.
+    // okhttp is compileOnly on the main source set; tests need it at runtime for OpdsUrlParser.
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlin.stdlib)
+    testImplementation(libs.okhttp)
 }
