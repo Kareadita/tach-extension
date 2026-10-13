@@ -88,50 +88,57 @@ fun PreferenceScreen.addEditTextPreference(
     }.also(::addPreference)
 }
 
+internal sealed interface CustomHeadersParse {
+    data class Ok(val headers: Headers) : CustomHeadersParse
+
+    /** [line] is 1-based. The offending text is not kept since it may contain a secret. */
+    data class Error(val line: Int) : CustomHeadersParse
+}
+
+/**
+ * Managed by the extension (`Authorization` carries the Kavita JWT) or by OkHttp, which encodes
+ * the body and connection based on them; a user override would break requests.
+ */
+private val reservedCustomHeaders = setOf(
+    "authorization",
+    "host",
+    "content-type",
+    "content-length",
+    "transfer-encoding",
+    "accept-encoding",
+    "connection",
+    "keep-alive",
+    "proxy-connection",
+    "te",
+    "trailer",
+    "upgrade",
+)
+
 /**
  * Parses user-supplied reverse-proxy headers.
  *
  * Expected format: one `Header-Name: value` pair per line.
- * Blank lines and lines starting with `#` are ignored.
- * `Authorization` is reserved for Kavita JWT auth and is skipped.
+ * Blank lines and lines starting with `#` are ignored. If a name repeats, the last value wins.
+ * Any malformed line or reserved header makes the whole input invalid.
  */
-internal fun parseCustomHttpHeaders(raw: String): Headers {
+internal fun parseCustomHttpHeaders(raw: String): CustomHeadersParse {
     val builder = Headers.Builder()
-    raw.lineSequence()
-        .map { it.trim() }
-        .filter { it.isNotEmpty() && !it.startsWith("#") }
-        .forEach { line ->
-            val idx = line.indexOf(':')
-            if (idx <= 0) return@forEach
-            val name = line.substring(0, idx).trim()
-            val value = line.substring(idx + 1).trim()
-            if (name.equals("Authorization", ignoreCase = true)) return@forEach
-            try {
-                builder.removeAll(name)
-                builder.add(name, value)
-            } catch (_: IllegalArgumentException) {
-                // Invalid names/values are rejected in the preference validator.
-            }
+    raw.lineSequence().forEachIndexed { index, rawLine ->
+        val line = rawLine.trim()
+        if (line.isEmpty() || line.startsWith("#")) return@forEachIndexed
+        val idx = line.indexOf(':')
+        val name = if (idx > 0) line.substring(0, idx).trim() else ""
+        if (name.isEmpty() || name.lowercase() in reservedCustomHeaders) {
+            return CustomHeadersParse.Error(index + 1)
         }
-    return builder.build()
+        try {
+            builder[name] = line.substring(idx + 1).trim()
+        } catch (_: IllegalArgumentException) {
+            return CustomHeadersParse.Error(index + 1)
+        }
+    }
+    return CustomHeadersParse.Ok(builder.build())
 }
 
-internal fun isValidCustomHttpHeaders(raw: String): Boolean {
-    raw.lineSequence()
-        .map { it.trim() }
-        .filter { it.isNotEmpty() && !it.startsWith("#") }
-        .forEach { line ->
-            val idx = line.indexOf(':')
-            if (idx <= 0) return false
-            val name = line.substring(0, idx).trim()
-            val value = line.substring(idx + 1).trim()
-            if (name.isEmpty()) return false
-            if (name.equals("Authorization", ignoreCase = true)) return false
-            try {
-                Headers.Builder().add(name, value)
-            } catch (_: IllegalArgumentException) {
-                return false
-            }
-        }
-    return true
-}
+internal fun isValidCustomHttpHeaders(raw: String): Boolean =
+    parseCustomHttpHeaders(raw) is CustomHeadersParse.Ok

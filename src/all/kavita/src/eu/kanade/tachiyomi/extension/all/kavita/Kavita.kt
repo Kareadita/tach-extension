@@ -2059,7 +2059,6 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             .add("User-Agent", "Tachiyomi Kavita v${AppInfo.getVersionName()}")
             .add("Content-Type", "application/json")
             .add("Authorization", "Bearer $jwtToken")
-            .addCustomHeaders()
     }
 
     private fun setupLoginHeaders(): Headers.Builder {
@@ -2067,38 +2066,39 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             .add("User-Agent", "Tachiyomi Kavita v${AppInfo.getVersionName()}")
             .add("Content-Type", "application/json")
             .add("Authorization", "Bearer $jwtToken")
-            .addCustomHeaders()
-    }
-
-    private fun Headers.Builder.addCustomHeaders(): Headers.Builder {
-        val extra = parseCustomHttpHeaders(preferences.customHeaders)
-        for (i in 0 until extra.size) {
-            val name = extra.name(i)
-            removeAll(name)
-            add(name, extra.value(i))
-        }
-        return this
     }
 
     /**
-     * Applies the reverse-proxy headers to requests aimed at the configured Kavita origin and
-     * removes them from anything else. Runs as a network interceptor so each redirect hop is
-     * checked, otherwise a redirect elsewhere would carry the credentials along.
+     * Adds the reverse-proxy headers to requests aimed at the configured Kavita origin.
+     * Runs as a network interceptor so each redirect hop is checked; OkHttp builds redirect
+     * follow-ups from the request as it was before network interceptors ran, so the values
+     * added here never carry over to another origin.
      */
     private fun interceptCustomHeaders(chain: Interceptor.Chain): Response {
         val request = chain.request()
-        val extra = parseCustomHttpHeaders(preferences.customHeaders)
+        if (!request.url.isSameOriginAs(preferences.serverUrl)) {
+            return chain.proceed(request)
+        }
+        val extra = when (val parsed = parseCustomHttpHeaders(preferences.customHeaders)) {
+            is CustomHeadersParse.Ok -> parsed.headers
+            is CustomHeadersParse.Error -> {
+                Log.w(LOG_TAG, "Ignoring custom HTTP headers: invalid entry on line ${parsed.line}")
+                return chain.proceed(request)
+            }
+        }
         if (extra.size == 0) {
             return chain.proceed(request)
         }
-        val isServerOrigin = request.url.isSameOriginAs(preferences.serverUrl)
         val requestBuilder = request.newBuilder()
         for (i in 0 until extra.size) {
             val name = extra.name(i)
-            if (isServerOrigin) {
-                requestBuilder.header(name, extra.value(i))
+            val value = extra.value(i)
+            // The cookie jar's cookies are already set here; keep them so proxy sessions survive.
+            val jarCookies = request.header("Cookie")
+            if (name.equals("Cookie", ignoreCase = true) && !jarCookies.isNullOrEmpty()) {
+                requestBuilder.header(name, "$jarCookies; $value")
             } else {
-                requestBuilder.removeHeader(name)
+                requestBuilder.header(name, value)
             }
         }
         return chain.proceed(requestBuilder.build())
