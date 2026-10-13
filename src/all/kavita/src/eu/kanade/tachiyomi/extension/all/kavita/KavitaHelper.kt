@@ -331,8 +331,8 @@ class KavitaHelper {
                     when (type) {
                         // Volume 1 -> 0.0001
                         ChapterType.SingleFileVolume -> rawNum / KavitaConstants.VOLUME_NUMBER_OFFSET
-                        // Special 100k -> 0.00001
-                        ChapterType.Special -> rawNum / KavitaConstants.SPECIAL_NUMBER_OFFSET
+                        // Specials have no meaningful number; order comes from the source list
+                        ChapterType.Special -> KavitaConstants.UNNUMBERED
                         else -> rawNum
                     }
                 }
@@ -341,11 +341,12 @@ class KavitaHelper {
             url = "/Chapter/${chapter.id}"
 
             // Only apply salt to Chapters.
-            // DO NOT apply to Volume or Special as it corrupts the 0.0001/0.00001 sorting logic.
+            // Volumes: would mess up ordering (0.0001+0.002 jumps past volume 2)
+            // Specials: rely on -2 sentinel which needs to remain -2
             if (chapter.fileCount > 1 &&
                 (type == ChapterType.Regular || type == ChapterType.Chapter || type == ChapterType.Issue)
             ) {
-                chapter_number += 0.001f * chapter.fileCount
+                chapter_number += 0.001f * chapter.fileCount.coerceAtMost(99)
                 url = "$url?split=${chapter.fileCount}"
             }
 
@@ -435,6 +436,10 @@ class KavitaHelper {
 
             scanlator = processChapterTemplate(scanlatorFormat, scanlatorVariables)
         }
+
+    // Strips the markers chapterFromVolume may append to a chapter URL
+    internal fun cleanChapterUrl(url: String): String =
+        url.substringBefore("_").substringBefore("?")
 
     internal fun formatVolumeNumber(volume: VolumeDto): String {
         return when {

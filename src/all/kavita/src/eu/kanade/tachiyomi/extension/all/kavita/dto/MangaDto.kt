@@ -93,7 +93,10 @@ data class SeriesDetailPlusDto(
 @Serializable
 data class SeriesDetailPlusWrapperDto(
     val series: SeriesPlus? = null,
-    val ratings: List<RatingDto> = emptyList(),
+    // Non-Kavita+-licensed servers return this as a literal JSON null rather than [],
+    // which a non-nullable List default can't absorb (default only applies when the
+    // key is missing, not when it's present with a null value).
+    val ratings: List<RatingDto>? = null,
     val recommendations: RecommendationsDto? = null,
 )
 

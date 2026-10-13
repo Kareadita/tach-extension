@@ -1,11 +1,12 @@
 package eu.kanade.tachiyomi.extension.all.kavita.dto
 
+import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.Serializable
 import kotlin.Triple
 
 @Serializable
 data class FilterV2Dto(
-    val id: Int? = null,
+    val id: Int = 0,
     val name: String? = null,
     val statements: MutableList<FilterStatementDto> = mutableListOf(),
     val combination: Int = FilterCombination.And.ordinal,
@@ -47,7 +48,9 @@ data class FilterStatementDto(
 
 @Serializable
 data class SortOptions(
+    @EncodeDefault(EncodeDefault.Mode.ALWAYS)
     var sortField: Int = SortFieldEnum.AverageRating.type,
+    @EncodeDefault(EncodeDefault.Mode.ALWAYS)
     var isAscending: Boolean = true,
 )
 
@@ -62,6 +65,7 @@ enum class SortFieldEnum(val type: Int) {
     ReadProgress(7),
     AverageRating(8),
     Random(9),
+    UserRating(10),
     ;
 
     companion object {
