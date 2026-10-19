@@ -39,6 +39,18 @@ data class FilterV2Dto(
     }
 }
 
+/**
+ * ANDs in "format is not Epub" when [hideEpub] is set.
+ *
+ * Skipped for Match-any (Or) filters, where "… OR not-Epub" would match nearly every series.
+ * As a result, Epubs can still appear in Match-any smart filters.
+ */
+fun FilterV2Dto.applyHideEpub(hideEpub: Boolean) {
+    if (hideEpub && combination == FilterCombination.And.ordinal) {
+        addStatement(FilterComparison.NotContains, FilterField.Formats, MangaFormat.Epub.format.toString())
+    }
+}
+
 @Serializable
 data class FilterStatementDto(
     val comparison: Int,

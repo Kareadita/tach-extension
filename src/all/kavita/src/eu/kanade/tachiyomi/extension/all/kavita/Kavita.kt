@@ -18,7 +18,6 @@ import eu.kanade.tachiyomi.extension.all.kavita.dto.ChapterDto
 import eu.kanade.tachiyomi.extension.all.kavita.dto.ChapterType
 import eu.kanade.tachiyomi.extension.all.kavita.dto.FilterComparison
 import eu.kanade.tachiyomi.extension.all.kavita.dto.FilterField
-import eu.kanade.tachiyomi.extension.all.kavita.dto.FilterStatementDto
 import eu.kanade.tachiyomi.extension.all.kavita.dto.FilterV2Dto
 import eu.kanade.tachiyomi.extension.all.kavita.dto.LibraryDto
 import eu.kanade.tachiyomi.extension.all.kavita.dto.LibraryTypeEnum
@@ -42,6 +41,7 @@ import eu.kanade.tachiyomi.extension.all.kavita.dto.SmartFilter
 import eu.kanade.tachiyomi.extension.all.kavita.dto.SortFieldEnum
 import eu.kanade.tachiyomi.extension.all.kavita.dto.SortOptions
 import eu.kanade.tachiyomi.extension.all.kavita.dto.VolumeDto
+import eu.kanade.tachiyomi.extension.all.kavita.dto.applyHideEpub
 import eu.kanade.tachiyomi.lib.i18n.Intl
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.POST
@@ -454,9 +454,10 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             )
             client.newCall(request).execute().use {
                 if (it.code == 200) {
-                    // Hardcode exclude epub
                     val decoded_filter = json.decodeFromString<FilterV2Dto>(it.body.string())
-                    decoded_filter.statements.add(FilterStatementDto(FilterComparison.NotContains.type, FilterField.Formats.type, "3"))
+                    decoded_filter.applyHideEpub(
+                        !preferences.getBoolean(SHOW_EPUB_PREF, SHOW_EPUB_DEFAULT),
+                    )
 
                     // Make request with selected filters
                     val url = if (wantToReadSelected) {
