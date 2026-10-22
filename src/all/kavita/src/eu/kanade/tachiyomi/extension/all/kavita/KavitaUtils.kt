@@ -6,6 +6,7 @@ import android.widget.Button
 import android.widget.Toast
 import androidx.preference.EditTextPreference
 import androidx.preference.PreferenceScreen
+import okhttp3.Headers
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
@@ -86,3 +87,58 @@ fun PreferenceScreen.addEditTextPreference(
         }
     }.also(::addPreference)
 }
+
+internal sealed interface CustomHeadersParse {
+    data class Ok(val headers: Headers) : CustomHeadersParse
+
+    /** [line] is 1-based. The offending text is not kept since it may contain a secret. */
+    data class Error(val line: Int) : CustomHeadersParse
+}
+
+/**
+ * Managed by the extension (`Authorization` carries the Kavita JWT) or by OkHttp, which encodes
+ * the body and connection based on them; a user override would break requests.
+ */
+private val reservedCustomHeaders = setOf(
+    "authorization",
+    "host",
+    "content-type",
+    "content-length",
+    "transfer-encoding",
+    "accept-encoding",
+    "connection",
+    "keep-alive",
+    "proxy-connection",
+    "te",
+    "trailer",
+    "upgrade",
+)
+
+/**
+ * Parses user-supplied reverse-proxy headers.
+ *
+ * Expected format: one `Header-Name: value` pair per line.
+ * Blank lines and lines starting with `#` are ignored. If a name repeats, the last value wins.
+ * Any malformed line or reserved header makes the whole input invalid.
+ */
+internal fun parseCustomHttpHeaders(raw: String): CustomHeadersParse {
+    val builder = Headers.Builder()
+    raw.lineSequence().forEachIndexed { index, rawLine ->
+        val line = rawLine.trim()
+        if (line.isEmpty() || line.startsWith("#")) return@forEachIndexed
+        val idx = line.indexOf(':')
+        val name = if (idx > 0) line.substring(0, idx).trim() else ""
+        if (name.isEmpty() || name.lowercase() in reservedCustomHeaders) {
+            return CustomHeadersParse.Error(index + 1)
+        }
+        try {
+            builder[name] = line.substring(idx + 1).trim()
+        } catch (_: IllegalArgumentException) {
+            return CustomHeadersParse.Error(index + 1)
+        }
+    }
+    return CustomHeadersParse.Ok(builder.build())
+}
+
+internal fun isValidCustomHttpHeaders(raw: String): Boolean =
+    parseCustomHttpHeaders(raw) is CustomHeadersParse.Ok
