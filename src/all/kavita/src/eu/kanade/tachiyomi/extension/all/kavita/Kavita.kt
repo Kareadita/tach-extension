@@ -139,6 +139,8 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
     override val lang = "all"
     override val supportsLatest = true
 
+    // Live prefs: URL and Bearer (via headersBuilder) are read separately. A settings
+    // change between the two can pair one server's URL with another's token for that request.
     private val apiUrl: String get() = getPrefApiUrl()
     private val apiKey: String get() = getPrefApiKey()
     override val baseUrl: String get() = getPrefBaseUrl()
@@ -162,6 +164,12 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
 
     /** Single-flight guard for search-triggered metadata reload. */
     private val metadataReloading = AtomicBoolean(false)
+
+    /**
+     * [loginGeneration] for which every metadata endpoint loaded without error.
+     * Empty lists are fine; a failed load must not mark the generation complete.
+     */
+    private val metadataLoadedGeneration = AtomicInteger(-1)
     private val json: Json by injectLazy()
 
     // Act as a cache — cleared on OPDS URL change so a server switch does not keep old data.
@@ -444,11 +452,10 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
     }
 
     override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
-        if (genresListMeta.isEmpty() || tagsListMeta.isEmpty()) {
-            Log.w(LOG_TAG, "Metadata not loaded yet; scheduling reload")
-            // Empty lists can also mean a healthy server with no tags — still only
-            // one in-flight reload so every search does not stampede Plugin/authenticate.
+        // Empty genre/tag lists are valid; only reload when this generation never completed.
+        if (metadataLoadedGeneration.get() != loginGeneration.get()) {
             if (apiUrl.isNotBlank() && metadataReloading.compareAndSet(false, true)) {
+                Log.d(LOG_TAG, "Metadata not loaded for current generation; scheduling reload")
                 scope.launch {
                     try {
                         loadSourceMetadata()
@@ -2691,6 +2698,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
     }
 
     private fun clearMemoryCaches() {
+        metadataLoadedGeneration.set(-1)
         series = emptyList()
         helper.seriesMap.clear()
         libraryTypeCache.clear()
@@ -2892,11 +2900,14 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         // Snapshot apiUrl after login (redirect may have corrected it).
         val baseApi = apiUrl
 
+        val failures = AtomicInteger(0)
+
         fun <T> loadIfCurrent(label: String, block: () -> T): T? {
             if (generation != loginGeneration.get()) return null
             return try {
                 block().also { Log.d(LOG_TAG, "Loaded $label") }
             } catch (e: Exception) {
+                failures.incrementAndGet()
                 Log.e(LOG_TAG, "Failed to load $label", e)
                 null
             }
@@ -2958,6 +2969,14 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             return
         }
 
+        // Mark complete only when every endpoint succeeded (empty lists still count).
+        if (failures.get() == 0) {
+            metadataLoadedGeneration.set(generation)
+            Log.d(LOG_TAG, "Kavita source metadata load completed (gen=$generation)")
+        } else {
+            Log.w(LOG_TAG, "Metadata load had ${failures.get()} failure(s); will retry later")
+        }
+
         try {
             val serverInfoDto = client.newCall(GET("$baseApi/Server/server-info-slim", headersBuilder().build()))
                 .execute()
@@ -2965,9 +2984,6 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             Log.d(LOG_TAG, "Kavita version: ${serverInfoDto.kavitaVersion}")
         } catch (e: Exception) {
             Log.e(LOG_TAG, "Failed to get server info", e)
-        }
-        if (generation == loginGeneration.get()) {
-            Log.d(LOG_TAG, "Kavita source metadata load completed (gen=$generation)")
         }
     }
 
