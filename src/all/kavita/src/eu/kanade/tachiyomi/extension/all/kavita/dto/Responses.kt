@@ -7,7 +7,6 @@ import kotlinx.serialization.Serializable
 data class AuthenticationDto(
     val username: String,
     val token: String,
-    val apiKey: String,
 )
 
 @Serializable
