@@ -100,22 +100,27 @@ import kotlin.coroutines.cancellation.CancellationException
 import kotlin.let
 import kotlin.runCatching
 
-class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSource, HttpSource() {
+class Kavita(
+    private val suffix: String = "",
+) : HttpSource(),
+    ConfigurableSource,
+    UnmeteredSource {
     private val helper = KavitaHelper()
 
     // Initialize the intl object
-    val intl = Intl(
-        language = Locale.getDefault().toString(),
-        baseLanguage = "en",
-        availableLanguages = KavitaInt.AVAILABLE_LANGS,
-        classLoader = this::class.java.classLoader!!,
-        createMessageFileName = { lang ->
-            when (lang) {
-                KavitaInt.SPANISH_LATAM -> Intl.createDefaultMessageFileName(KavitaInt.SPANISH)
-                else -> Intl.createDefaultMessageFileName(lang)
-            }
-        },
-    )
+    val intl =
+        Intl(
+            language = Locale.getDefault().toString(),
+            baseLanguage = "en",
+            availableLanguages = KavitaInt.AVAILABLE_LANGS,
+            classLoader = this::class.java.classLoader!!,
+            createMessageFileName = { lang ->
+                when (lang) {
+                    KavitaInt.SPANISH_LATAM -> Intl.createDefaultMessageFileName(KavitaInt.SPANISH)
+                    else -> Intl.createDefaultMessageFileName(lang)
+                }
+            },
+        )
     override val client: OkHttpClient =
         network.client.newBuilder()
             .dns(Dns.SYSTEM)
@@ -195,27 +200,29 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
     private inline fun <reified T> Response.parseAs(): T =
         use {
             if (!it.isSuccessful) {
-                val errorMessage = try {
-                    when (it.code) {
-                        400 -> intl["http_errors_400"]
-                        401 -> intl["http_errors_401"]
-                        403 -> intl["http_errors_403"]
-                        404 -> intl["http_errors_404"]
-                        429 -> intl["http_errors_429"]
-                        500 -> intl["http_errors_500"]
-                        502 -> intl["http_errors_502"]
-                        503 -> intl["http_errors_503"]
-                        else -> "HTTP error ${it.code}"
+                val errorMessage =
+                    try {
+                        when (it.code) {
+                            400 -> intl["http_errors_400"]
+                            401 -> intl["http_errors_401"]
+                            403 -> intl["http_errors_403"]
+                            404 -> intl["http_errors_404"]
+                            429 -> intl["http_errors_429"]
+                            500 -> intl["http_errors_500"]
+                            502 -> intl["http_errors_502"]
+                            503 -> intl["http_errors_503"]
+                            else -> "HTTP error ${it.code}"
+                        }
+                    } catch (e: Exception) {
+                        "HTTP error ${it.code}"
                     }
-                } catch (e: Exception) {
-                    "HTTP error ${it.code}"
-                }
                 Log.e(LOG_TAG, "HTTP error ${it.code}: $errorMessage - ${it.request.url}")
-                val versionCheck = try {
-                    intl["check_version"]
-                } catch (e: Exception) {
-                    "If issues persist, contact support with logs"
-                }
+                val versionCheck =
+                    try {
+                        intl["check_version"]
+                    } catch (e: Exception) {
+                        "If issues persist, contact support with logs"
+                    }
                 throw IOException("$errorMessage\n$versionCheck")
             }
 
@@ -256,12 +263,13 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             when {
                 // Handle both API-style and web-style URLs
                 manga.url.contains("/series/") || manga.url.contains("/Series/") -> {
-                    val seriesId = manga.url
-                        .substringAfterLast("/series/")
-                        .substringAfterLast("/Series/")
-                        .substringBefore("?")
-                        .substringBefore("/")
-                        .toIntOrNull()
+                    val seriesId =
+                        manga.url
+                            .substringAfterLast("/series/")
+                            .substringAfterLast("/Series/")
+                            .substringBefore("?")
+                            .substringBefore("/")
+                            .toIntOrNull()
 
                     if (seriesId == null) {
                         Log.w(LOG_TAG, "Couldn't extract series ID from URL: ${manga.url}")
@@ -287,7 +295,9 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                 }
 
                 // Fallback - use original URL if we don't recognize the pattern
-                else -> manga.url
+                else -> {
+                    manga.url
+                }
             }
         } catch (e: Exception) {
             Log.e(LOG_TAG, "Error in getMangaUrl", e)
@@ -295,75 +305,84 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         }
     }
 
-    override fun getChapterUrl(chapter: SChapter): String {
-        return helper.cleanChapterUrl(chapter.url)
-    }
+    override fun getChapterUrl(chapter: SChapter): String = helper.cleanChapterUrl(chapter.url)
 
     /**
      * Custom implementation for fetch popular, latest and search
      * Handles and logs errors to provide a more detailed exception to the users.
      */
-    private suspend fun fetch(request: Request): MangasPage = withContext(Dispatchers.IO) {
-        try {
-            val response = client.newCall(request).await()
-            if (!response.isSuccessful) {
-                val code = response.code
-                throw IOException("Http Error: $code\n ${intl["http_errors_$code"]}\n${intl["check_version"]}")
+    private suspend fun fetch(request: Request): MangasPage =
+        withContext(Dispatchers.IO) {
+            try {
+                val response = client.newCall(request).await()
+                if (!response.isSuccessful) {
+                    val code = response.code
+                    throw IOException("Http Error: $code\n ${intl["http_errors_$code"]}\n${intl["check_version"]}")
+                }
+                popularMangaParse(response)
+            } catch (e: Exception) {
+                Log.e(LOG_TAG, "Error fetching manga", e)
+                throw e
             }
-            popularMangaParse(response)
-        } catch (e: Exception) {
-            Log.e(LOG_TAG, "Error fetching manga", e)
-            throw e
         }
-    }
 
     @OptIn(DelicateCoroutinesApi::class)
     private fun <T : Any> runAsObservable(block: suspend () -> T): Observable<T> =
         Single.create<T> { subscriber ->
-            val job = GlobalScope.launch {
-                try {
-                    subscriber.onSuccess(block())
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Throwable) {
-                    if (!subscriber.isUnsubscribed) {
-                        subscriber.onError(e)
+            val job =
+                GlobalScope.launch {
+                    try {
+                        subscriber.onSuccess(block())
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Throwable) {
+                        if (!subscriber.isUnsubscribed) {
+                            subscriber.onError(e)
+                        }
                     }
                 }
-            }
             subscriber.add(Subscriptions.create { job.cancel() })
         }.toObservable()
 
-    override fun fetchPopularManga(page: Int): Observable<MangasPage> = runAsObservable {
-        fetch(popularMangaRequest(page))
-    }
+    override fun fetchPopularManga(page: Int): Observable<MangasPage> =
+        runAsObservable {
+            fetch(popularMangaRequest(page))
+        }
 
-    override fun fetchLatestUpdates(page: Int): Observable<MangasPage> = runAsObservable {
-        fetch(latestUpdatesRequest(page))
-    }
+    override fun fetchLatestUpdates(page: Int): Observable<MangasPage> =
+        runAsObservable {
+            fetch(latestUpdatesRequest(page))
+        }
 
-    override fun fetchSearchManga(page: Int, query: String, filters: FilterList): Observable<MangasPage> = runAsObservable {
-        val specialListFilter = filters.find { it is SpecialListFilter } as? SpecialListFilter
+    override fun fetchSearchManga(
+        page: Int,
+        query: String,
+        filters: FilterList,
+    ): Observable<MangasPage> =
+        runAsObservable {
+            val specialListFilter = filters.find { it is SpecialListFilter } as? SpecialListFilter
 
-        when (specialListFilter?.state) {
-            2 -> { // Reading Lists
-                val response = client.newCall(readingListRequest()).await()
-                readingListParse(response)
-            }
-            else -> { // Regular searches (including Want to Read)
-                fetch(searchMangaRequest(page, query, filters))
+            when (specialListFilter?.state) {
+                2 -> { // Reading Lists
+                    val response = client.newCall(readingListRequest()).await()
+                    readingListParse(response)
+                }
+
+                else -> { // Regular searches (including Want to Read)
+                    fetch(searchMangaRequest(page, query, filters))
+                }
             }
         }
-    }
 
-    override fun fetchChapterList(manga: SManga): Observable<List<SChapter>> = runAsObservable {
-        if (manga.url.contains("/ReadingList/")) {
-            fetchReadingListItems(manga)
-        } else {
-            client.newCall(chapterListRequest(manga)).await()
-                .use(::chapterListParse)
+    override fun fetchChapterList(manga: SManga): Observable<List<SChapter>> =
+        runAsObservable {
+            if (manga.url.contains("/ReadingList/")) {
+                fetchReadingListItems(manga)
+            } else {
+                client.newCall(chapterListRequest(manga)).await()
+                    .use(::chapterListParse)
+            }
         }
-    }
 
     override fun popularMangaParse(response: Response): MangasPage {
         try {
@@ -373,15 +392,17 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
 
             Log.d(LOG_TAG, "Parsing ${result.size} series for popular feed")
 
-            val allManga = result.map<SeriesDto, SManga> { item ->
-                helper.createSeriesDto(item, apiUrl, apiKey)
-            }
+            val allManga =
+                result.map<SeriesDto, SManga> { item ->
+                    helper.createSeriesDto(item, apiUrl, apiKey)
+                }
 
             Log.d(LOG_TAG, "Created ${allManga.size} titles")
 
-            val filteredManga = allManga.filter { manga ->
-                isLibraryAllowedForFeed(manga)
-            }
+            val filteredManga =
+                allManga.filter { manga ->
+                    isLibraryAllowedForFeed(manga)
+                }
 
             Log.d(LOG_TAG, "After filtering: ${filteredManga.size} titles remain")
 
@@ -398,7 +419,10 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         }
     }
 
-    private fun prepareRequest(page: Int, payload: String): Request {
+    private fun prepareRequest(
+        page: Int,
+        payload: String,
+    ): Request {
         if (!isLogged) {
             doLogin()
         }
@@ -410,10 +434,11 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
     }
 
     override fun popularMangaRequest(page: Int): Request {
-        val filter = FilterV2Dto(
-            sortOptions = SortOptions(SortFieldEnum.UserRating.type, false),
-            statements = mutableListOf(),
-        )
+        val filter =
+            FilterV2Dto(
+                sortOptions = SortOptions(SortFieldEnum.UserRating.type, false),
+                statements = mutableListOf(),
+            )
 
         // Always exclude EPUBs unless explicitly included
         if (!preferences.getBoolean(SHOW_EPUB_PREF, SHOW_EPUB_DEFAULT)) {
@@ -433,10 +458,11 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
     }
 
     override fun latestUpdatesRequest(page: Int): Request {
-        val filter = FilterV2Dto(
-            sortOptions = SortOptions(SortFieldEnum.LastChapterAdded.type, false),
-            statements = mutableListOf(),
-        )
+        val filter =
+            FilterV2Dto(
+                sortOptions = SortOptions(SortFieldEnum.LastChapterAdded.type, false),
+                statements = mutableListOf(),
+            )
 
         // Always exclude EPUBs unless explicitly included
         if (!preferences.getBoolean(SHOW_EPUB_PREF, SHOW_EPUB_DEFAULT)) {
@@ -451,7 +477,11 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         return prepareRequest(page, payload)
     }
 
-    override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
+    override fun searchMangaRequest(
+        page: Int,
+        query: String,
+        filters: FilterList,
+    ): Request {
         // Empty genre/tag lists are valid; only reload when this generation never completed.
         if (metadataLoadedGeneration.get() != loginGeneration.get()) {
             if (apiUrl.isNotBlank() && metadataReloading.compareAndSet(false, true)) {
@@ -478,23 +508,26 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
 
         // If a SmartFilter selected, apply its filter and return that
         if (smartFilterFilter?.state != 0 && smartFilterFilter != null) {
-            val index = try {
-                smartFilterFilter.state as Int - 1
-            } catch (e: Exception) {
-                Log.e(LOG_TAG, e.toString(), e)
-                0
-            }
+            val index =
+                try {
+                    smartFilterFilter.state as Int - 1
+                } catch (e: Exception) {
+                    Log.e(LOG_TAG, e.toString(), e)
+                    0
+                }
 
             val filter: SmartFilter = smartFilters[index]
-            val payload = buildJsonObject {
-                put("EncodedFilter", filter.filter)
-            }
+            val payload =
+                buildJsonObject {
+                    put("EncodedFilter", filter.filter)
+                }
             // Decode selected filters
-            val request = POST(
-                "$apiUrl/filter/decode",
-                headersBuilder().build(),
-                payload.toString().toRequestBody(JSON_MEDIA_TYPE),
-            )
+            val request =
+                POST(
+                    "$apiUrl/filter/decode",
+                    headersBuilder().build(),
+                    payload.toString().toRequestBody(JSON_MEDIA_TYPE),
+                )
             client.newCall(request).execute().use {
                 if (it.code == 200) {
                     val decoded_filter = json.decodeFromString<FilterV2Dto>(it.body.string())
@@ -503,11 +536,12 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                     )
 
                     // Make request with selected filters
-                    val url = if (wantToReadSelected) {
-                        "$apiUrl/want-to-read/v2?pageNumber=$page&pageSize=20"
-                    } else {
-                        "$apiUrl/series/all-v2?pageNumber=$page&pageSize=20"
-                    }
+                    val url =
+                        if (wantToReadSelected) {
+                            "$apiUrl/want-to-read/v2?pageNumber=$page&pageSize=20"
+                        } else {
+                            "$apiUrl/series/all-v2?pageNumber=$page&pageSize=20"
+                        }
                     return POST(
                         url,
                         headersBuilder().build(),
@@ -521,10 +555,11 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         }
 
         // Always build filterV2 from all filters
-        val filterV2 = FilterV2Dto(
-            sortOptions = SortOptions(SortFieldEnum.SortName.type, true),
-            statements = mutableListOf(),
-        )
+        val filterV2 =
+            FilterV2Dto(
+                sortOptions = SortOptions(SortFieldEnum.SortName.type, true),
+                statements = mutableListOf(),
+            )
 
         // Handle text query first - search with prefix modifiers
         if (query.isNotBlank()) {
@@ -538,12 +573,13 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                     if (artistQuery.isNotBlank()) {
                         Log.d(LOG_TAG, "Searching for artist (text contains): '$artistQuery'")
 
-                        val artistFields = listOf(
-                            FilterField.CoverArtist,
-                            FilterField.Penciller,
-                            FilterField.Inker,
-                            FilterField.Colorist,
-                        )
+                        val artistFields =
+                            listOf(
+                                FilterField.CoverArtist,
+                                FilterField.Penciller,
+                                FilterField.Inker,
+                                FilterField.Colorist,
+                            )
                         artistFields.forEach { field ->
                             filterV2.addStatement(FilterComparison.Contains, field, artistQuery)
                         }
@@ -551,24 +587,26 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                         filterV2.addStatement(FilterComparison.Contains, FilterField.People, artistQuery)
                     }
                 }
+
                 queryLower.startsWith("people:") -> {
                     val peopleQuery = query.substringAfter(":").trim()
 
                     if (peopleQuery.isNotBlank()) {
                         Log.d(LOG_TAG, "Searching for people (text contains): '$peopleQuery'")
 
-                        val peopleFields = listOf(
-                            FilterField.Writers,
-                            FilterField.Penciller,
-                            FilterField.Inker,
-                            FilterField.Colorist,
-                            FilterField.Letterer,
-                            FilterField.CoverArtist,
-                            FilterField.Editor,
-                            FilterField.Publisher,
-                            FilterField.Characters,
-                            FilterField.Translators,
-                        )
+                        val peopleFields =
+                            listOf(
+                                FilterField.Writers,
+                                FilterField.Penciller,
+                                FilterField.Inker,
+                                FilterField.Colorist,
+                                FilterField.Letterer,
+                                FilterField.CoverArtist,
+                                FilterField.Editor,
+                                FilterField.Publisher,
+                                FilterField.Characters,
+                                FilterField.Translators,
+                            )
 
                         peopleFields.forEach { field ->
                             filterV2.addStatement(FilterComparison.Contains, field, peopleQuery)
@@ -577,6 +615,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                         filterV2.addStatement(FilterComparison.Contains, FilterField.People, peopleQuery)
                     }
                 }
+
                 else -> {
                     // Regular search - only search series name
                     filterV2.addStatement(FilterComparison.Matches, FilterField.SeriesName, query)
@@ -592,6 +631,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                         filterV2.sortOptions.isAscending = sortState.ascending
                     }
                 }
+
                 is UserRating -> {
                     if (filter.state > 0) {
                         filterV2.addStatement(
@@ -601,6 +641,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                         )
                     }
                 }
+
                 is Filter.Group<*> -> {
                     when (filter) {
                         is StatusFilterGroup -> {
@@ -614,6 +655,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                                             "0",
                                         )
                                     }
+
                                     2 -> { // In Progress (1-99%)
                                         filterV2.addStatement(
                                             FilterComparison.GreaterThanEqual,
@@ -626,6 +668,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                                             "99",
                                         )
                                     }
+
                                     3 -> { // Read (100%)
                                         filterV2.addStatement(
                                             FilterComparison.Equal,
@@ -637,20 +680,26 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                                 }
                             }
                         }
+
                         is ReleaseYearRangeGroup -> {
                             filter.state.forEach { rangeFilter ->
                                 if ((rangeFilter as Filter.Text).state.isNotEmpty()) {
                                     when (rangeFilter.name) {
-                                        "Min" -> filterV2.addStatement(
-                                            FilterComparison.GreaterThanEqual,
-                                            FilterField.ReleaseYear,
-                                            rangeFilter.state,
-                                        )
-                                        "Max" -> filterV2.addStatement(
-                                            FilterComparison.LessThanEqual,
-                                            FilterField.ReleaseYear,
-                                            rangeFilter.state,
-                                        )
+                                        "Min" -> {
+                                            filterV2.addStatement(
+                                                FilterComparison.GreaterThanEqual,
+                                                FilterField.ReleaseYear,
+                                                rangeFilter.state,
+                                            )
+                                        }
+
+                                        "Max" -> {
+                                            filterV2.addStatement(
+                                                FilterComparison.LessThanEqual,
+                                                FilterField.ReleaseYear,
+                                                rangeFilter.state,
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -662,32 +711,39 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                                 Log.d(LOG_TAG, "Checking genre: ${genreFilter.name}, state=${genreFilter.state}, match=${genre?.id}")
                                 genre?.let {
                                     when (genreFilter.state) {
-                                        STATE_INCLUDE -> filterV2.addStatement(
-                                            FilterComparison.Contains,
-                                            FilterField.Genres,
-                                            genre.id.toString(),
-                                        )
-                                        STATE_EXCLUDE -> filterV2.addStatement(
-                                            FilterComparison.NotContains,
-                                            FilterField.Genres,
-                                            genre.id.toString(),
-                                        )
+                                        STATE_INCLUDE -> {
+                                            filterV2.addStatement(
+                                                FilterComparison.Contains,
+                                                FilterField.Genres,
+                                                genre.id.toString(),
+                                            )
+                                        }
+
+                                        STATE_EXCLUDE -> {
+                                            filterV2.addStatement(
+                                                FilterComparison.NotContains,
+                                                FilterField.Genres,
+                                                genre.id.toString(),
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
 
                         is TagFilterGroup -> {
-                            val included = filter.state
-                                .filter { it.state == STATE_INCLUDE }
-                                .mapNotNull { tagFilter ->
-                                    tagsListMeta.find { it.title == tagFilter.name }?.id?.toString()
-                                }
-                            val excluded = filter.state
-                                .filter { it.state == STATE_EXCLUDE }
-                                .mapNotNull { tagFilter ->
-                                    tagsListMeta.find { it.title == tagFilter.name }?.id?.toString()
-                                }
+                            val included =
+                                filter.state
+                                    .filter { it.state == STATE_INCLUDE }
+                                    .mapNotNull { tagFilter ->
+                                        tagsListMeta.find { it.title == tagFilter.name }?.id?.toString()
+                                    }
+                            val excluded =
+                                filter.state
+                                    .filter { it.state == STATE_EXCLUDE }
+                                    .mapNotNull { tagFilter ->
+                                        tagsListMeta.find { it.title == tagFilter.name }?.id?.toString()
+                                    }
 
                             if (included.isNotEmpty()) {
                                 filterV2.addStatement(
@@ -704,17 +760,20 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                                 )
                             }
                         }
+
                         is AgeRatingFilterGroup -> {
-                            val included = filter.state
-                                .filter { it.state == STATE_INCLUDE }
-                                .mapNotNull { ageFilter ->
-                                    ageRatingsListMeta.find { it.title == ageFilter.name }?.value?.toString()
-                                }
-                            val excluded = filter.state
-                                .filter { it.state == STATE_EXCLUDE }
-                                .mapNotNull { ageFilter ->
-                                    ageRatingsListMeta.find { it.title == ageFilter.name }?.value?.toString()
-                                }
+                            val included =
+                                filter.state
+                                    .filter { it.state == STATE_INCLUDE }
+                                    .mapNotNull { ageFilter ->
+                                        ageRatingsListMeta.find { it.title == ageFilter.name }?.value?.toString()
+                                    }
+                            val excluded =
+                                filter.state
+                                    .filter { it.state == STATE_EXCLUDE }
+                                    .mapNotNull { ageFilter ->
+                                        ageRatingsListMeta.find { it.title == ageFilter.name }?.value?.toString()
+                                    }
 
                             if (included.isNotEmpty()) {
                                 filterV2.addStatement(
@@ -731,17 +790,19 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                                 )
                             }
                         }
+
                         is FormatsFilterGroup -> {
                             filter.state.forEach { formatFilter ->
                                 if ((formatFilter as Filter.CheckBox).state) {
-                                    val formatValue = when (formatFilter.name) {
-                                        "Image" -> 0
-                                        "Archive" -> 1
-                                        "Pdf" -> 4
-                                        "Epub" -> 3
-                                        "Unknown" -> 2
-                                        else -> null
-                                    }
+                                    val formatValue =
+                                        when (formatFilter.name) {
+                                            "Image" -> 0
+                                            "Archive" -> 1
+                                            "Pdf" -> 4
+                                            "Epub" -> 3
+                                            "Unknown" -> 2
+                                            else -> null
+                                        }
                                     formatValue?.let {
                                         filterV2.addStatement(
                                             FilterComparison.Contains,
@@ -752,17 +813,20 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                                 }
                             }
                         }
+
                         is CollectionFilterGroup -> {
-                            val included = filter.state
-                                .filter { it.state == STATE_INCLUDE }
-                                .mapNotNull { collectionFilter ->
-                                    collectionsListMeta.find { it.title == collectionFilter.name }?.id?.toString()
-                                }
-                            val excluded = filter.state
-                                .filter { it.state == STATE_EXCLUDE }
-                                .mapNotNull { collectionFilter ->
-                                    collectionsListMeta.find { it.title == collectionFilter.name }?.id?.toString()
-                                }
+                            val included =
+                                filter.state
+                                    .filter { it.state == STATE_INCLUDE }
+                                    .mapNotNull { collectionFilter ->
+                                        collectionsListMeta.find { it.title == collectionFilter.name }?.id?.toString()
+                                    }
+                            val excluded =
+                                filter.state
+                                    .filter { it.state == STATE_EXCLUDE }
+                                    .mapNotNull { collectionFilter ->
+                                        collectionsListMeta.find { it.title == collectionFilter.name }?.id?.toString()
+                                    }
 
                             if (included.isNotEmpty()) {
                                 filterV2.addStatement(
@@ -779,17 +843,20 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                                 )
                             }
                         }
+
                         is LanguageFilterGroup -> {
-                            val included = filter.state
-                                .filter { it.state == STATE_INCLUDE }
-                                .mapNotNull { languageFilter ->
-                                    languagesListMeta.find { it.title == languageFilter.name }?.isoCode
-                                }
-                            val excluded = filter.state
-                                .filter { it.state == STATE_EXCLUDE }
-                                .mapNotNull { languageFilter ->
-                                    languagesListMeta.find { it.title == languageFilter.name }?.isoCode
-                                }
+                            val included =
+                                filter.state
+                                    .filter { it.state == STATE_INCLUDE }
+                                    .mapNotNull { languageFilter ->
+                                        languagesListMeta.find { it.title == languageFilter.name }?.isoCode
+                                    }
+                            val excluded =
+                                filter.state
+                                    .filter { it.state == STATE_EXCLUDE }
+                                    .mapNotNull { languageFilter ->
+                                        languagesListMeta.find { it.title == languageFilter.name }?.isoCode
+                                    }
 
                             if (included.isNotEmpty()) {
                                 filterV2.addStatement(
@@ -806,6 +873,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                                 )
                             }
                         }
+
                         is LibrariesFilterGroup -> {
                             val includedLibraries = mutableListOf<String>()
                             val excludedLibraries = mutableListOf<String>()
@@ -836,17 +904,19 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                                 )
                             }
                         }
+
                         is PubStatusFilterGroup -> {
                             filter.state.forEach { pubStatusFilter ->
                                 if ((pubStatusFilter as Filter.CheckBox).state) {
-                                    val statusValue = when (pubStatusFilter.name) {
-                                        "Ongoing" -> 0
-                                        "Hiatus" -> 1
-                                        "Completed" -> 2
-                                        "Cancelled" -> 3
-                                        "Ended" -> 4
-                                        else -> null
-                                    }
+                                    val statusValue =
+                                        when (pubStatusFilter.name) {
+                                            "Ongoing" -> 0
+                                            "Hiatus" -> 1
+                                            "Completed" -> 2
+                                            "Cancelled" -> 3
+                                            "Ended" -> 4
+                                            else -> null
+                                        }
                                     statusValue?.let {
                                         filterV2.addStatement(
                                             FilterComparison.Equal,
@@ -857,6 +927,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                                 }
                             }
                         }
+
                         // Editors
                         is EditorPeopleFilterGroup -> {
                             filter.state.forEach { peopleFilter ->
@@ -872,6 +943,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                                 }
                             }
                         }
+
                         // Publishers
                         is PublisherPeopleFilterGroup -> {
                             filter.state.forEach { peopleFilter ->
@@ -887,29 +959,36 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                                 }
                             }
                         }
+
                         else -> {
                             Log.d(LOG_TAG, "Unhandled filter group type: ${filter.javaClass.simpleName}")
                         }
                     }
                 }
+
                 is Filter.CheckBox -> {
                     // Handle standalone checkboxes
                     Log.d(LOG_TAG, "Standalone checkbox filter: ${filter.name}")
                 }
+
                 is Filter.Text -> {
                     // Handle standalone text filters
                     Log.d(LOG_TAG, "Standalone text filter: ${filter.name}")
                 }
+
                 is Filter.TriState -> {
                     // Handle standalone tri-state filters
                     Log.d(LOG_TAG, "Standalone tri-state filter: ${filter.name}")
                 }
+
                 is Filter.Header -> {
                     // Skip header filters
                 }
+
                 is Filter.Separator -> {
                     // Skip separator filters
                 }
+
                 else -> {
                     Log.d(LOG_TAG, "Unhandled filter type: ${filter.javaClass.simpleName}")
                 }
@@ -917,18 +996,19 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         }
 
         // Always apply selected people filters (even if query is blank)
-        val roleToField = mapOf(
-            WriterPeopleFilterGroup::class to FilterField.Writers,
-            PencillerPeopleFilterGroup::class to FilterField.Penciller,
-            InkerPeopleFilterGroup::class to FilterField.Inker,
-            ColoristPeopleFilterGroup::class to FilterField.Colorist,
-            LettererPeopleFilterGroup::class to FilterField.Letterer,
-            CoverArtistPeopleFilterGroup::class to FilterField.CoverArtist,
-            EditorPeopleFilterGroup::class to FilterField.Editor,
-            PublisherPeopleFilterGroup::class to FilterField.Publisher,
-            CharacterPeopleFilterGroup::class to FilterField.Characters,
-            TranslatorPeopleFilterGroup::class to FilterField.Translators,
-        )
+        val roleToField =
+            mapOf(
+                WriterPeopleFilterGroup::class to FilterField.Writers,
+                PencillerPeopleFilterGroup::class to FilterField.Penciller,
+                InkerPeopleFilterGroup::class to FilterField.Inker,
+                ColoristPeopleFilterGroup::class to FilterField.Colorist,
+                LettererPeopleFilterGroup::class to FilterField.Letterer,
+                CoverArtistPeopleFilterGroup::class to FilterField.CoverArtist,
+                EditorPeopleFilterGroup::class to FilterField.Editor,
+                PublisherPeopleFilterGroup::class to FilterField.Publisher,
+                CharacterPeopleFilterGroup::class to FilterField.Characters,
+                TranslatorPeopleFilterGroup::class to FilterField.Translators,
+            )
 
         roleToField.forEach { (filterClass, filterField) ->
             val group = filters.find { filterClass.isInstance(it) } as? Filter.Group<*>
@@ -951,11 +1031,12 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         Log.d(LOG_TAG, "Search payload: $payload")
         Log.d(LOG_TAG, "Filter statements: ${filterV2.statements}")
 
-        val url = if (wantToReadSelected) {
-            "$apiUrl/want-to-read/v2?pageNumber=$page&pageSize=20"
-        } else {
-            "$apiUrl/series/all-v2?pageNumber=$page&pageSize=20"
-        }
+        val url =
+            if (wantToReadSelected) {
+                "$apiUrl/want-to-read/v2?pageNumber=$page&pageSize=20"
+            } else {
+                "$apiUrl/series/all-v2?pageNumber=$page&pageSize=20"
+            }
 
         return POST(
             url,
@@ -968,87 +1049,95 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
      * MANGA DETAILS (metadata about series)
      * **/
 
-    override fun fetchMangaDetails(manga: SManga): Observable<SManga> = runAsObservable {
-        val serieId = helper.getIdFromUrl(manga.url)
+    override fun fetchMangaDetails(manga: SManga): Observable<SManga> =
+        runAsObservable {
+            val serieId = helper.getIdFromUrl(manga.url)
 
-        if (manga.url.contains("source=readinglist")) {
-            val readingListId = manga.url.substringAfter("readingListId=").substringBefore("&").toIntOrNull()
-            val now = Calendar.getInstance()
-            val readingList = cachedReadingLists.find { it.id == readingListId }
-            if (readingList != null) {
-                val groupTags = preferences.groupTags
-                val starting = readingList.startingYear.takeIf { it > 0 }?.let {
-                    "${readingList.startingYear}-${readingList.startingMonth.toString().padStart(2, '0')}"
-                }
-                val ending = readingList.endingYear.takeIf { it > 0 }?.let {
-                    "${readingList.endingYear}-${readingList.endingMonth.toString().padStart(2, '0')}"
-                }
+            if (manga.url.contains("source=readinglist")) {
+                val readingListId = manga.url.substringAfter("readingListId=").substringBefore("&").toIntOrNull()
+                val now = Calendar.getInstance()
+                val readingList = cachedReadingLists.find { it.id == readingListId }
+                if (readingList != null) {
+                    val groupTags = preferences.groupTags
+                    val starting =
+                        readingList.startingYear.takeIf { it > 0 }?.let {
+                            "${readingList.startingYear}-${readingList.startingMonth.toString().padStart(2, '0')}"
+                        }
+                    val ending =
+                        readingList.endingYear.takeIf { it > 0 }?.let {
+                            "${readingList.endingYear}-${readingList.endingMonth.toString().padStart(2, '0')}"
+                        }
 
-                val itemsRequest = GET("$apiUrl/ReadingList/items?readingListId=$readingListId", headersBuilder().build())
-                val items = try {
-                    client.newCall(itemsRequest).await().parseAs<List<ReadingListItemDto>>()
-                } catch (e: Exception) {
-                    Log.e(LOG_TAG, "Error parsing reading list items", e)
-                    emptyList()
-                }
+                    val itemsRequest = GET("$apiUrl/ReadingList/items?readingListId=$readingListId", headersBuilder().build())
+                    val items =
+                        try {
+                            client.newCall(itemsRequest).await().parseAs<List<ReadingListItemDto>>()
+                        } catch (e: Exception) {
+                            Log.e(LOG_TAG, "Error parsing reading list items", e)
+                            emptyList()
+                        }
 
-                val allGenres = items.flatMap { item ->
-                    try {
-                        val seriesMetaRequest = GET("$apiUrl/series/metadata?seriesId=${item.seriesId}", headersBuilder().build())
-                        client.newCall(seriesMetaRequest).await()
-                            .parseAs<SeriesDetailPlusDto>()
-                            .genres.map { it.title }
-                    } catch (e: Exception) {
-                        Log.e(LOG_TAG, "Error fetching series metadata for item ${item.seriesId}", e)
-                        emptyList()
+                    val allGenres =
+                        items.flatMap { item ->
+                            try {
+                                val seriesMetaRequest = GET("$apiUrl/series/metadata?seriesId=${item.seriesId}", headersBuilder().build())
+                                client.newCall(seriesMetaRequest).await()
+                                    .parseAs<SeriesDetailPlusDto>()
+                                    .genres.map { it.title }
+                            } catch (e: Exception) {
+                                Log.e(LOG_TAG, "Error fetching series metadata for item ${item.seriesId}", e)
+                                emptyList()
+                            }
+                        }.distinct()
+
+                    val genreString =
+                        if (groupTags) {
+                            buildList {
+                                add("Type: Reading List")
+                                starting?.let { add("Starting: $it") }
+                                ending?.let { add("Ending: $it") }
+                                if (allGenres.isNotEmpty()) addAll(allGenres.map { "Genres: $it" })
+                            }.joinToString(", ")
+                        } else {
+                            buildList {
+                                starting?.let { add("Starting: $it") }
+                                ending?.let { add("Ending: $it") }
+                                add("Reading List")
+                                if (allGenres.isNotEmpty()) addAll(allGenres)
+                            }.joinToString(", ")
+                        }
+
+                    val hasDates = readingList.startingYear > 0 && readingList.endingYear > 0
+                    val status =
+                        if (hasDates) {
+                            val endCal =
+                                Calendar.getInstance().apply {
+                                    set(readingList.endingYear, readingList.endingMonth - 1, 1)
+                                }
+                            if (now.after(endCal)) SManga.PUBLISHING_FINISHED else SManga.ONGOING
+                        } else {
+                            SManga.COMPLETED
+                        }
+
+                    manga.apply {
+                        title = (if (readingList.promoted) "🔺 " else "") + readingList.title
+                        artist = "${readingList.itemCount} items"
+                        // readinglist-cover serves the custom cover when set and a generated one otherwise.
+                        thumbnail_url = "$apiUrl/image/readinglist-cover?readingListId=$readingListId&apiKey=$apiKey"
+                        description = readingList.summary ?: "Reading List"
+                        genre = genreString
+                        url = manga.url
+                        initialized = true
+                        this.status = status
                     }
-                }.distinct()
-
-                val genreString = if (groupTags) {
-                    buildList {
-                        add("Type: Reading List")
-                        starting?.let { add("Starting: $it") }
-                        ending?.let { add("Ending: $it") }
-                        if (allGenres.isNotEmpty()) addAll(allGenres.map { "Genres: $it" })
-                    }.joinToString(", ")
                 } else {
-                    buildList {
-                        starting?.let { add("Starting: $it") }
-                        ending?.let { add("Ending: $it") }
-                        add("Reading List")
-                        if (allGenres.isNotEmpty()) addAll(allGenres)
-                    }.joinToString(", ")
-                }
-
-                val hasDates = readingList.startingYear > 0 && readingList.endingYear > 0
-                val status = if (hasDates) {
-                    val endCal = Calendar.getInstance().apply {
-                        set(readingList.endingYear, readingList.endingMonth - 1, 1)
-                    }
-                    if (now.after(endCal)) SManga.PUBLISHING_FINISHED else SManga.ONGOING
-                } else {
-                    SManga.COMPLETED
-                }
-
-                manga.apply {
-                    title = (if (readingList.promoted) "🔺 " else "") + readingList.title
-                    artist = "${readingList.itemCount} items"
-                    // readinglist-cover serves the custom cover when set and a generated one otherwise.
-                    thumbnail_url = "$apiUrl/image/readinglist-cover?readingListId=$readingListId&apiKey=$apiKey"
-                    description = readingList.summary ?: "Reading List"
-                    genre = genreString
-                    url = manga.url
-                    initialized = true
-                    this.status = status
+                    manga.apply { initialized = true }
                 }
             } else {
-                manga.apply { initialized = true }
+                val response = client.newCall(GET("$apiUrl/series/metadata?seriesId=$serieId", headersBuilder().build())).await()
+                mangaDetailsParse(response).apply { initialized = true }
             }
-        } else {
-            val response = client.newCall(GET("$apiUrl/series/metadata?seriesId=$serieId", headersBuilder().build())).await()
-            mangaDetailsParse(response).apply { initialized = true }
         }
-    }
 
     override fun mangaDetailsRequest(manga: SManga): Request {
         val serieId = helper.getIdFromUrl(manga.url)
@@ -1070,9 +1159,10 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
 
         return try {
             Log.d(LOG_TAG, "Fetching volumes for series $seriesId")
-            val volumes = client.newCall(
-                GET("$apiUrl/Series/volumes?seriesId=$seriesId", headersBuilder().build()),
-            ).execute().parseAs<List<VolumeDto>>()
+            val volumes =
+                client.newCall(
+                    GET("$apiUrl/Series/volumes?seriesId=$seriesId", headersBuilder().build()),
+                ).execute().parseAs<List<VolumeDto>>()
 
             val libraryType = getLibraryType(seriesId)
             val isComicLibrary = libraryType == LibraryTypeEnum.Comic || libraryType == LibraryTypeEnum.ComicVine
@@ -1095,9 +1185,10 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                 }
                 // Manga: use volume cover
                 else if (!isComicLibrary) {
-                    val hasSingleFile = volume.chapters.any { chapter ->
-                        ChapterType.of(chapter, volume) == ChapterType.SingleFileVolume
-                    }
+                    val hasSingleFile =
+                        volume.chapters.any { chapter ->
+                            ChapterType.of(chapter, volume) == ChapterType.SingleFileVolume
+                        }
                     if (hasSingleFile && volume.coverImage.isNotBlank()) {
                         val url = "$apiUrl/Image/volume-cover?volumeId=${volume.id}&apiKey=$apiKey"
                         val isUnread = volume.pagesRead < volume.pages
@@ -1111,17 +1202,19 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             Log.d(LOG_TAG, "Found ${coverCandidates.size} cover candidates")
 
             // Prefer first unread (lowest number), else most recent (highest number)
-            val targetCover = coverCandidates
-                .filter { it.second }
-                .minByOrNull { it.third }
-                ?: coverCandidates.maxByOrNull { it.third }
+            val targetCover =
+                coverCandidates
+                    .filter { it.second }
+                    .minByOrNull { it.third }
+                    ?: coverCandidates.maxByOrNull { it.third }
 
             targetCover?.first?.let { baseUrl ->
-                val timestamp = when {
-                    baseUrl.contains("chapter-cover") -> chapterMap[baseUrl]?.lastModifiedUtc
-                    baseUrl.contains("volume-cover") -> volumeMap[baseUrl]?.lastModified
-                    else -> null
-                } ?: System.currentTimeMillis().toString()
+                val timestamp =
+                    when {
+                        baseUrl.contains("chapter-cover") -> chapterMap[baseUrl]?.lastModifiedUtc
+                        baseUrl.contains("volume-cover") -> volumeMap[baseUrl]?.lastModified
+                        else -> null
+                    } ?: System.currentTimeMillis().toString()
 
                 // Append cache-busting timestamp to always get the latest cover
                 "$baseUrl&ts=$timestamp"
@@ -1133,58 +1226,62 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
     }
 
     override fun mangaDetailsParse(response: Response): SManga {
-        val result = try {
-            response.parseAs<SeriesDetailPlusDto>().takeIf {
-                it.seriesId != null && it.summary != null
-            } ?: throw IOException("Invalid series details response")
-        } catch (e: Exception) {
-            Log.e(LOG_TAG, "Error parsing series details", e)
-            throw IOException("${intl["version_exceptions_chapters_parse"]}\n${intl["check_version"]}")
-        }
-        val existingSeries = series.find { dto -> dto.id == result.seriesId }
-        val ratingLine = try {
-            val responsePlus = try {
-                client.newCall(
-                    GET(
-                        "$apiUrl/Metadata/series-detail-plus?seriesId=${result.seriesId}",
-                        headersBuilder().build(),
-                    ),
-                ).execute()
+        val result =
+            try {
+                response.parseAs<SeriesDetailPlusDto>().takeIf {
+                    it.seriesId != null && it.summary != null
+                } ?: throw IOException("Invalid series details response")
             } catch (e: Exception) {
-                Log.w(LOG_TAG, "series-detail-plus endpoint failed, falling back to ratings endpoint", e)
-                null
+                Log.e(LOG_TAG, "Error parsing series details", e)
+                throw IOException("${intl["version_exceptions_chapters_parse"]}\n${intl["check_version"]}")
             }
+        val existingSeries = series.find { dto -> dto.id == result.seriesId }
+        val ratingLine =
+            try {
+                val responsePlus =
+                    try {
+                        client.newCall(
+                            GET(
+                                "$apiUrl/Metadata/series-detail-plus?seriesId=${result.seriesId}",
+                                headersBuilder().build(),
+                            ),
+                        ).execute()
+                    } catch (e: Exception) {
+                        Log.w(LOG_TAG, "series-detail-plus endpoint failed, falling back to ratings endpoint", e)
+                        null
+                    }
 
-            if (responsePlus == null || !responsePlus.isSuccessful) {
-                // Fallback: just get ratings from the main metadata
-                val score = result.ratings.firstOrNull()?.averageScore ?: 0f
-                if (score > 0) "⭐ Score: ${"%.1f".format(score)}\n" else ""
-            } else {
-                val rawResponse = responsePlus.body.string()
-                if (rawResponse.isBlank() || rawResponse.trim().startsWith("<")) {
-                    Log.e(LOG_TAG, "Invalid response for series-detail-plus: $rawResponse")
+                if (responsePlus == null || !responsePlus.isSuccessful) {
+                    // Fallback: just get ratings from the main metadata
                     val score = result.ratings.firstOrNull()?.averageScore ?: 0f
                     if (score > 0) "⭐ Score: ${"%.1f".format(score)}\n" else ""
                 } else {
-                    try {
-                        val detailPlusWrapper = json.decodeFromString<SeriesDetailPlusWrapperDto>(rawResponse)
-                        val score = detailPlusWrapper.series?.averageScore?.takeIf { it > 0f }
-                            ?: detailPlusWrapper.ratings?.firstOrNull()?.averageScore
-                            ?: result.ratings.firstOrNull()?.averageScore
-                            ?: 0f
-                        if (score > 0) "⭐ Score: ${"%.1f".format(score)}\n" else ""
-                    } catch (e: Exception) {
-                        Log.e(LOG_TAG, "Error parsing series detail plus, using fallback", e)
+                    val rawResponse = responsePlus.body.string()
+                    if (rawResponse.isBlank() || rawResponse.trim().startsWith("<")) {
+                        Log.e(LOG_TAG, "Invalid response for series-detail-plus: $rawResponse")
                         val score = result.ratings.firstOrNull()?.averageScore ?: 0f
                         if (score > 0) "⭐ Score: ${"%.1f".format(score)}\n" else ""
+                    } else {
+                        try {
+                            val detailPlusWrapper = json.decodeFromString<SeriesDetailPlusWrapperDto>(rawResponse)
+                            val score =
+                                detailPlusWrapper.series?.averageScore?.takeIf { it > 0f }
+                                    ?: detailPlusWrapper.ratings?.firstOrNull()?.averageScore
+                                    ?: result.ratings.firstOrNull()?.averageScore
+                                    ?: 0f
+                            if (score > 0) "⭐ Score: ${"%.1f".format(score)}\n" else ""
+                        } catch (e: Exception) {
+                            Log.e(LOG_TAG, "Error parsing series detail plus, using fallback", e)
+                            val score = result.ratings.firstOrNull()?.averageScore ?: 0f
+                            if (score > 0) "⭐ Score: ${"%.1f".format(score)}\n" else ""
+                        }
                     }
                 }
+            } catch (e: Exception) {
+                Log.e(LOG_TAG, "Error fetching ratings, using fallback", e)
+                val score = result.ratings.firstOrNull()?.averageScore ?: 0f
+                if (score > 0) "⭐ Score: ${"%.1f".format(score)}\n" else ""
             }
-        } catch (e: Exception) {
-            Log.e(LOG_TAG, "Error fetching ratings, using fallback", e)
-            val score = result.ratings.firstOrNull()?.averageScore ?: 0f
-            if (score > 0) "⭐ Score: ${"%.1f".format(score)}\n" else ""
-        }
         if (existingSeries != null) {
             val genreTitles = result.genres.map { it.title }
             val tagTitles = result.tags.map { it.title }
@@ -1200,37 +1297,41 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             manga.title = existingSeries.name
             manga.url = "$apiUrl/Series/${result.seriesId}"
             manga.artist = result.coverArtists.joinToString { it.name }
-            manga.description = listOfNotNull(
-                ratingLine.takeIf { it.isNotBlank() },
-                result.summary,
-            ).joinToString("\n")
+            manga.description =
+                listOfNotNull(
+                    ratingLine.takeIf { it.isNotBlank() },
+                    result.summary,
+                ).joinToString("\n")
             manga.author = result.writers.joinToString { it.name }
 
-            manga.genre = helper.buildGenreString(
-                libraryName = existingSeries.libraryName,
-                demographic = foundDemographic,
-                formats = foundFormats,
-                genres = filteredGenres,
-                tags = filteredTags,
-                groupTags = preferences.groupTags,
-            )
+            manga.genre =
+                helper.buildGenreString(
+                    libraryName = existingSeries.libraryName,
+                    demographic = foundDemographic,
+                    formats = foundFormats,
+                    genres = filteredGenres,
+                    tags = filteredTags,
+                    groupTags = preferences.groupTags,
+                )
 
             manga.thumbnail_url = resolveThumbnailUrl(result.seriesId)
 
-            manga.status = when (result.publicationStatus) {
-                4 -> SManga.PUBLISHING_FINISHED
-                2 -> SManga.COMPLETED
-                0 -> SManga.ONGOING
-                3 -> SManga.CANCELLED
-                1 -> SManga.ON_HIATUS
-                else -> SManga.UNKNOWN
-            }
+            manga.status =
+                when (result.publicationStatus) {
+                    4 -> SManga.PUBLISHING_FINISHED
+                    2 -> SManga.COMPLETED
+                    0 -> SManga.ONGOING
+                    3 -> SManga.CANCELLED
+                    1 -> SManga.ON_HIATUS
+                    else -> SManga.UNKNOWN
+                }
 
             return manga
         }
-        val serieDto = client.newCall(GET("$apiUrl/Series/${result.seriesId}", headersBuilder().build()))
-            .execute()
-            .parseAs<SeriesDto>()
+        val serieDto =
+            client.newCall(GET("$apiUrl/Series/${result.seriesId}", headersBuilder().build()))
+                .execute()
+                .parseAs<SeriesDto>()
 
         return SManga.create().apply {
             val genreTitles = result.genres.map { it.title }
@@ -1246,30 +1347,33 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             url = "$baseUrl/Series/${result.seriesId}" // "$baseUrl/library/${result.getLibraryId(serieDto)}/series/${result.seriesId}"
             thumbnail_url = resolveThumbnailUrl(result.seriesId)
             artist = result.coverArtists.joinToString { it.name }
-            description = listOfNotNull(
-                ratingLine.takeIf { it.isNotBlank() },
-                result.summary,
-            ).joinToString("\n")
+            description =
+                listOfNotNull(
+                    ratingLine.takeIf { it.isNotBlank() },
+                    result.summary,
+                ).joinToString("\n")
             author = result.writers.joinToString { it.name }
 
-            genre = helper.buildGenreString(
-                libraryName = result.getLibraryName(serieDto),
-                demographic = foundDemographic,
-                formats = foundFormats,
-                genres = filteredGenres,
-                tags = filteredTags,
-                groupTags = preferences.groupTags,
-            )
+            genre =
+                helper.buildGenreString(
+                    libraryName = result.getLibraryName(serieDto),
+                    demographic = foundDemographic,
+                    formats = foundFormats,
+                    genres = filteredGenres,
+                    tags = filteredTags,
+                    groupTags = preferences.groupTags,
+                )
 
             title = serieDto.name
-            status = when (result.publicationStatus) {
-                4 -> SManga.PUBLISHING_FINISHED
-                2 -> SManga.COMPLETED
-                0 -> SManga.ONGOING
-                3 -> SManga.CANCELLED
-                1 -> SManga.ON_HIATUS
-                else -> SManga.UNKNOWN
-            }
+            status =
+                when (result.publicationStatus) {
+                    4 -> SManga.PUBLISHING_FINISHED
+                    2 -> SManga.COMPLETED
+                    0 -> SManga.ONGOING
+                    3 -> SManga.CANCELLED
+                    1 -> SManga.ON_HIATUS
+                    else -> SManga.UNKNOWN
+                }
 //            Log.d(LOG_TAG, "Publication status received: ${result.publicationStatus}")
         }
     }
@@ -1277,47 +1381,48 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
     /**
      ** Reading Lists
      **/
-    private fun readingListRequest(): Request {
-        return POST(
+    private fun readingListRequest(): Request =
+        POST(
             "$apiUrl/ReadingList/lists?includePromoted=true&sortByLastModified=true",
             headersBuilder().build(),
             "{}".toRequestBody(JSON_MEDIA_TYPE),
         )
-    }
 
-    private fun readingListParse(response: Response): MangasPage {
-        return try {
+    private fun readingListParse(response: Response): MangasPage =
+        try {
             val readingLists = response.parseAs<List<ReadingListDto>>()
             cachedReadingLists = readingLists
             val now = Calendar.getInstance()
-            val mangaList = readingLists.map { list ->
-                val hasDates = list.startingYear > 0 && list.endingYear > 0
-                val status = if (hasDates) {
-                    val endCal = Calendar.getInstance().apply {
-                        set(list.endingYear, list.endingMonth - 1, 1)
+            val mangaList =
+                readingLists.map { list ->
+                    val hasDates = list.startingYear > 0 && list.endingYear > 0
+                    val status =
+                        if (hasDates) {
+                            val endCal =
+                                Calendar.getInstance().apply {
+                                    set(list.endingYear, list.endingMonth - 1, 1)
+                                }
+                            if (now.after(endCal)) SManga.PUBLISHING_FINISHED else SManga.ONGOING
+                        } else {
+                            SManga.COMPLETED
+                        }
+                    SManga.create().apply {
+                        title = (if (list.promoted) "🔺 " else "") + list.title
+                        artist = "${list.itemCount} items"
+                        author = list.ownerUserName
+                        // readinglist-cover serves the custom cover when set and a generated one otherwise.
+                        thumbnail_url = "$apiUrl/Image/readinglist-cover?readingListId=${list.id}&apiKey=$apiKey"
+                        description = list.summary ?: "Reading List"
+                        url = "$baseUrl/ReadingList/items?readingListId=${list.id}&source=readinglist"
+                        initialized = true
+                        this.status = status
                     }
-                    if (now.after(endCal)) SManga.PUBLISHING_FINISHED else SManga.ONGOING
-                } else {
-                    SManga.COMPLETED
                 }
-                SManga.create().apply {
-                    title = (if (list.promoted) "🔺 " else "") + list.title
-                    artist = "${list.itemCount} items"
-                    author = list.ownerUserName
-                    // readinglist-cover serves the custom cover when set and a generated one otherwise.
-                    thumbnail_url = "$apiUrl/Image/readinglist-cover?readingListId=${list.id}&apiKey=$apiKey"
-                    description = list.summary ?: "Reading List"
-                    url = "$baseUrl/ReadingList/items?readingListId=${list.id}&source=readinglist"
-                    initialized = true
-                    this.status = status
-                }
-            }
             MangasPage(mangaList, false)
         } catch (e: Exception) {
             Log.e(LOG_TAG, "Error parsing reading lists", e)
             MangasPage(emptyList(), false)
         }
-    }
 
     private suspend fun fetchReadingListItems(manga: SManga): List<SChapter> {
         val readingListId = manga.url.substringAfter("readingListId=").substringBefore("&")
@@ -1331,140 +1436,184 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         val readingListId = response.request.url.queryParameter("readingListId")
 
         val firstItem = items.firstOrNull()
-        val isWebtoon = firstItem?.let { item ->
-            runCatching<Boolean> {
-                val meta = client.newCall(GET("$apiUrl/series/metadata?seriesId=${item.seriesId}", headersBuilder().build()))
-                    .await().parseAs<SeriesDetailPlusDto>()
+        val isWebtoon =
+            firstItem?.let { item ->
+                runCatching<Boolean> {
+                    val meta =
+                        client.newCall(GET("$apiUrl/series/metadata?seriesId=${item.seriesId}", headersBuilder().build()))
+                            .await().parseAs<SeriesDetailPlusDto>()
 
-                val genreTitles = meta.genres.map { it.title }
-                val tagTitles = meta.tags.map { it.title }
+                    val genreTitles = meta.genres.map { it.title }
+                    val tagTitles = meta.tags.map { it.title }
 
-                // Extract demographic and formats information
-                val triple = helper.extractDemographicAndFormat(genreTitles, tagTitles)
-                val foundDemographic = triple.first
-                val foundFormats = triple.second
+                    // Extract demographic and formats information
+                    val triple = helper.extractDemographicAndFormat(genreTitles, tagTitles)
+                    val foundDemographic = triple.first
+                    val foundFormats = triple.second
 
-                // Get all tags when GroupTags is disabled
-                val allTagsForGrouping = if (preferences.groupTags) {
-                    emptyList()
-                } else {
-                    genreTitles + tagTitles
-                }
+                    // Get all tags when GroupTags is disabled
+                    val allTagsForGrouping =
+                        if (preferences.groupTags) {
+                            emptyList()
+                        } else {
+                            genreTitles + tagTitles
+                        }
 
-                // Get library information
-                val libraryName = meta.libraryName.takeIf { !it.isNullOrEmpty() }
-                    ?: series.find { it.id == item.seriesId }?.libraryName
-                    ?: runCatching {
-                        val seriesDto = client.newCall(GET("$apiUrl/Series/${item.seriesId}", headersBuilder().build()))
-                            .await().parseAs<SeriesDto>()
-                        seriesDto.libraryName
-                    }.getOrNull()
+                    // Get library information
+                    val libraryName =
+                        meta.libraryName.takeIf { !it.isNullOrEmpty() }
+                            ?: series.find { it.id == item.seriesId }?.libraryName
+                            ?: runCatching {
+                                val seriesDto =
+                                    client.newCall(GET("$apiUrl/Series/${item.seriesId}", headersBuilder().build()))
+                                        .await().parseAs<SeriesDto>()
+                                seriesDto.libraryName
+                            }.getOrNull()
 
-                Log.d(LOG_TAG, "Reading list item ${item.seriesId} library: $libraryName")
+                    Log.d(LOG_TAG, "Reading list item ${item.seriesId} library: $libraryName")
 
-                val isWebtoonDetected = helper.isWebtoonOrLongStrip(
-                    genres = genreTitles,
-                    tags = tagTitles,
-                    libraryName = libraryName,
-                    format = foundFormats.firstOrNull(),
-                    demographic = foundDemographic,
-                    allTags = allTagsForGrouping,
-                )
+                    val isWebtoonDetected =
+                        helper.isWebtoonOrLongStrip(
+                            genres = genreTitles,
+                            tags = tagTitles,
+                            libraryName = libraryName,
+                            format = foundFormats.firstOrNull(),
+                            demographic = foundDemographic,
+                            allTags = allTagsForGrouping,
+                        )
 
-                isWebtoonDetected
-            }.getOrElse { false }
-        } ?: false
+                    isWebtoonDetected
+                }.getOrElse { false }
+            } ?: false
 
         return items.map { item ->
             SChapter.create().apply {
-                url = when {
-                    item.chapterId != null && item.chapterId > 0 ->
-                        "/Chapter/${item.chapterId}?readingListId=$readingListId&seriesId=${item.seriesId}&chapterId=${item.chapterId}"
-                    item.volumeId != null && item.volumeId > 0 ->
-                        "/Volume/${item.volumeId}?readingListId=$readingListId&seriesId=${item.seriesId}&volumeId=${item.volumeId}"
-                    else ->
-                        "/Series/${item.seriesId}?readingListId=$readingListId&seriesId=${item.seriesId}&order=${item.order}"
-                }
+                url =
+                    when {
+                        item.chapterId != null && item.chapterId > 0 -> {
+                            "/Chapter/${item.chapterId}?readingListId=$readingListId&seriesId=${item.seriesId}&chapterId=${item.chapterId}"
+                        }
 
-                val type = when {
-                    item.volumeId != null && item.volumeNumber != null -> {
-                        when {
-                            item.volumeNumber == KavitaConstants.UNNUMBERED_VOLUME_STR -> {
-                                val libraryType = getLibraryType(item.seriesId)
-                                when (libraryType) {
-                                    LibraryTypeEnum.Comic, LibraryTypeEnum.ComicVine -> ChapterType.Issue
-                                    else -> ChapterType.Chapter
+                        item.volumeId != null && item.volumeId > 0 -> {
+                            "/Volume/${item.volumeId}?readingListId=$readingListId&seriesId=${item.seriesId}&volumeId=${item.volumeId}"
+                        }
+
+                        else -> {
+                            "/Series/${item.seriesId}?readingListId=$readingListId&seriesId=${item.seriesId}&order=${item.order}"
+                        }
+                    }
+
+                val type =
+                    when {
+                        item.volumeId != null && item.volumeNumber != null -> {
+                            when {
+                                item.volumeNumber == KavitaConstants.UNNUMBERED_VOLUME_STR -> {
+                                    val libraryType = getLibraryType(item.seriesId)
+                                    when (libraryType) {
+                                        LibraryTypeEnum.Comic, LibraryTypeEnum.ComicVine -> ChapterType.Issue
+                                        else -> ChapterType.Chapter
+                                    }
+                                }
+
+                                item.chapterNumber == KavitaConstants.UNNUMBERED_VOLUME_STR -> {
+                                    ChapterType.SingleFileVolume
+                                }
+
+                                else -> {
+                                    ChapterType.Regular
                                 }
                             }
-                            item.chapterNumber == KavitaConstants.UNNUMBERED_VOLUME_STR -> ChapterType.SingleFileVolume
-                            else -> ChapterType.Regular
                         }
-                    }
-                    item.chapterId != null && item.chapterNumber != null -> {
-                        val libraryType = getLibraryType(item.seriesId)
-                        when (libraryType) {
-                            LibraryTypeEnum.Comic, LibraryTypeEnum.ComicVine -> ChapterType.Issue
-                            else -> ChapterType.Chapter
-                        }
-                    }
-                    else -> ChapterType.Special
-                }
 
-                name = buildString {
-                    append("${item.order + 1}. ")
-                    when (type) {
-                        ChapterType.Regular -> {
-                            val chapterNum = item.chapterNumber?.toIntOrNull()?.toString()
-                                ?.padStart(2, '0')
-                                ?: item.chapterNumber ?: ""
-                            when {
-                                item.chapterTitleName?.isNotBlank() == true ->
-                                    append("$chapterNum - ${item.chapterTitleName}")
-                                else ->
-                                    append("Vol. ${item.volumeNumber} Ch. $chapterNum")
+                        item.chapterId != null && item.chapterNumber != null -> {
+                            val libraryType = getLibraryType(item.seriesId)
+                            when (libraryType) {
+                                LibraryTypeEnum.Comic, LibraryTypeEnum.ComicVine -> ChapterType.Issue
+                                else -> ChapterType.Chapter
                             }
                         }
-                        ChapterType.SingleFileVolume -> {
-                            when {
-                                item.chapterTitleName?.isNotBlank() == true ->
-                                    append("v${item.volumeNumber} - ${item.chapterTitleName}")
-                                else ->
-                                    append("Volume ${item.volumeNumber}")
-                            }
-                        }
-                        ChapterType.Issue -> {
-                            val issueNum = item.chapterNumber?.toIntOrNull()?.toString()
-                                ?.padStart(3, '0')
-                                ?: item.chapterNumber ?: ""
-                            when {
-                                item.chapterTitleName?.isNotBlank() == true ->
-                                    append("${item.chapterTitleName} (#$issueNum)")
-                                else ->
-                                    append("Issue #$issueNum")
-                            }
-                        }
-                        ChapterType.Chapter -> {
-                            val chapterNum = item.chapterNumber?.toIntOrNull()?.toString()
-                                ?.padStart(2, '0')
-                                ?: item.chapterNumber ?: ""
-                            when {
-                                item.chapterTitleName?.isNotBlank() == true ->
-                                    append("$chapterNum - ${item.chapterTitleName}")
-                                else ->
-                                    append(if (isWebtoon) "Episode $chapterNum" else "Chapter $chapterNum")
-                            }
-                        }
-                        ChapterType.Special -> {
-                            append(item.chapterTitleName ?: "Item ${item.order + 1}")
+
+                        else -> {
+                            ChapterType.Special
                         }
                     }
-                }
 
-                date_upload = if (preferences.RdDate && !item.releaseDate.isNullOrBlank()) {
-                    parseDateSafe(item.releaseDate)
-                } else {
-                    0L
-                }
+                name =
+                    buildString {
+                        append("${item.order + 1}. ")
+                        when (type) {
+                            ChapterType.Regular -> {
+                                val chapterNum =
+                                    item.chapterNumber?.toIntOrNull()?.toString()
+                                        ?.padStart(2, '0')
+                                        ?: item.chapterNumber ?: ""
+                                when {
+                                    item.chapterTitleName?.isNotBlank() == true -> {
+                                        append("$chapterNum - ${item.chapterTitleName}")
+                                    }
+
+                                    else -> {
+                                        append("Vol. ${item.volumeNumber} Ch. $chapterNum")
+                                    }
+                                }
+                            }
+
+                            ChapterType.SingleFileVolume -> {
+                                when {
+                                    item.chapterTitleName?.isNotBlank() == true -> {
+                                        append("v${item.volumeNumber} - ${item.chapterTitleName}")
+                                    }
+
+                                    else -> {
+                                        append("Volume ${item.volumeNumber}")
+                                    }
+                                }
+                            }
+
+                            ChapterType.Issue -> {
+                                val issueNum =
+                                    item.chapterNumber?.toIntOrNull()?.toString()
+                                        ?.padStart(3, '0')
+                                        ?: item.chapterNumber ?: ""
+                                when {
+                                    item.chapterTitleName?.isNotBlank() == true -> {
+                                        append("${item.chapterTitleName} (#$issueNum)")
+                                    }
+
+                                    else -> {
+                                        append("Issue #$issueNum")
+                                    }
+                                }
+                            }
+
+                            ChapterType.Chapter -> {
+                                val chapterNum =
+                                    item.chapterNumber?.toIntOrNull()?.toString()
+                                        ?.padStart(2, '0')
+                                        ?: item.chapterNumber ?: ""
+                                when {
+                                    item.chapterTitleName?.isNotBlank() == true -> {
+                                        append("$chapterNum - ${item.chapterTitleName}")
+                                    }
+
+                                    else -> {
+                                        append(if (isWebtoon) "Episode $chapterNum" else "Chapter $chapterNum")
+                                    }
+                                }
+                            }
+
+                            ChapterType.Special -> {
+                                append(item.chapterTitleName ?: "Item ${item.order + 1}")
+                            }
+                        }
+                    }
+
+                date_upload =
+                    if (preferences.RdDate && !item.releaseDate.isNullOrBlank()) {
+                        parseDateSafe(item.releaseDate)
+                    } else {
+                        0L
+                    }
                 chapter_number = item.order.toFloat()
                 scanlator = item.seriesName
             }
@@ -1479,8 +1628,8 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
     override val disableRelatedMangasBySearch: Boolean
         get() = true
 
-    override fun relatedMangaListRequest(manga: SManga): Request {
-        return if (manga.url.contains("/ReadingList/") || manga.url.contains("readingListId=")) {
+    override fun relatedMangaListRequest(manga: SManga): Request =
+        if (manga.url.contains("/ReadingList/") || manga.url.contains("readingListId=")) {
             val readingListId = manga.url.substringAfter("readingListId=").substringBefore("&")
             GET("$apiUrl/ReadingList/items?readingListId=$readingListId", headersBuilder().build())
         } else {
@@ -1490,7 +1639,6 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             Log.d(LOG_TAG, "Fetching related manga from: $url")
             GET(url, headersBuilder().build())
         }
-    }
 
     override fun relatedMangaListParse(response: Response): List<SManga> {
         val requestUrl = response.request.url.toString()
@@ -1499,8 +1647,9 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                 val items = response.parseAs<List<ReadingListItemDto>>()
                 items.distinctBy { it.seriesId }.mapNotNull { item ->
                     try {
-                        val seriesDto = client.newCall(GET("$apiUrl/Series/${item.seriesId}", headersBuilder().build()))
-                            .execute().parseAs<SeriesDto>()
+                        val seriesDto =
+                            client.newCall(GET("$apiUrl/Series/${item.seriesId}", headersBuilder().build()))
+                                .execute().parseAs<SeriesDto>()
 
                         val manga = helper.createSeriesDto(seriesDto, apiUrl, apiKey)
                         val suggestionLibraryName = seriesDto.libraryName
@@ -1529,58 +1678,64 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
 
                 // Extract the current manga's library from the request URL
                 val currentSeriesId = requestUrl.substringAfter("seriesId=").toIntOrNull()
-                val currentMangaLibrary = currentSeriesId?.let { seriesId ->
-                    series.find { it.id == seriesId }?.libraryName
-                }
-
-                val allRelated = listOf(
-                    result.sequels.map { it to "Sequel" },
-                    result.prequels.map { it to "Prequel" },
-                    result.spinOffs.map { it to "Spin-off" },
-                    result.adaptations.map { it to "Adaptation" },
-                    result.sideStories.map { it to "Side Story" },
-                    result.characters.map { it to "Character" },
-                    result.contains.map { it to "Contains" },
-                    result.others.map { it to "Other" },
-                    result.alternativeSettings.map { it to "Alternative Setting" },
-                    result.alternativeVersions.map { it to "Alternative Version" },
-                    result.doujinshis.map { it to "Doujinshi" },
-                    result.parent.map { it to "Parent" },
-                    result.editions.map { it to "Edition" },
-                    result.annuals.map { it to "Annual" },
-                ).flatten()
-                val filteredRelated = if (!preferences.getBoolean(SHOW_EPUB_PREF, SHOW_EPUB_DEFAULT)) {
-                    allRelated.filterNot { (item, _) ->
-                        item.format == MangaFormat.Epub.format
+                val currentMangaLibrary =
+                    currentSeriesId?.let { seriesId ->
+                        series.find { it.id == seriesId }?.libraryName
                     }
-                } else {
-                    allRelated
-                }
+
+                val allRelated =
+                    listOf(
+                        result.sequels.map { it to "Sequel" },
+                        result.prequels.map { it to "Prequel" },
+                        result.spinOffs.map { it to "Spin-off" },
+                        result.adaptations.map { it to "Adaptation" },
+                        result.sideStories.map { it to "Side Story" },
+                        result.characters.map { it to "Character" },
+                        result.contains.map { it to "Contains" },
+                        result.others.map { it to "Other" },
+                        result.alternativeSettings.map { it to "Alternative Setting" },
+                        result.alternativeVersions.map { it to "Alternative Version" },
+                        result.doujinshis.map { it to "Doujinshi" },
+                        result.parent.map { it to "Parent" },
+                        result.editions.map { it to "Edition" },
+                        result.annuals.map { it to "Annual" },
+                    ).flatten()
+                val filteredRelated =
+                    if (!preferences.getBoolean(SHOW_EPUB_PREF, SHOW_EPUB_DEFAULT)) {
+                        allRelated.filterNot { (item, _) ->
+                            item.format == MangaFormat.Epub.format
+                        }
+                    } else {
+                        allRelated
+                    }
 
                 Log.d(LOG_TAG, "Processing suggestions for current manga library: $currentMangaLibrary")
                 Log.d(LOG_TAG, "Total related items before filtering: ${filteredRelated.size}")
 
-                val suggestions = filteredRelated.mapNotNull { (item, relation) ->
-                    val suggestionLibraryName = item.libraryName
-                        ?: libraryListMeta.find { it.id == item.libraryId }?.name
+                val suggestions =
+                    filteredRelated.mapNotNull { (item, relation) ->
+                        val suggestionLibraryName =
+                            item.libraryName
+                                ?: libraryListMeta.find { it.id == item.libraryId }?.name
 
-                    val manga = item.toSManga(baseUrl, apiUrl, apiKey).apply {
-                        if (relation.isNotBlank()) {
-                            title = "[$relation] $title"
-                        } else {
-                            Log.e(LOG_TAG, "No related title")
+                        val manga =
+                            item.toSManga(baseUrl, apiUrl, apiKey).apply {
+                                if (relation.isNotBlank()) {
+                                    title = "[$relation] $title"
+                                } else {
+                                    Log.e(LOG_TAG, "No related title")
+                                }
+                            }
+                        // Show suggestions only from the current library or allowed search libraries
+                        manga.takeIf {
+                            isLibraryAllowedForSuggestions(
+                                it,
+                                currentMangaLibrary,
+                                suggestionLibraryName,
+                                item.libraryId,
+                            )
                         }
                     }
-                    // Show suggestions only from the current library or allowed search libraries
-                    manga.takeIf {
-                        isLibraryAllowedForSuggestions(
-                            it,
-                            currentMangaLibrary,
-                            suggestionLibraryName,
-                            item.libraryId,
-                        )
-                    }
-                }
 
                 Log.d(LOG_TAG, "Final suggestions count: ${suggestions.size}")
                 Log.d(LOG_TAG, "Allowed libraries for search: ${preferences.allowedLibrariesSearch}")
@@ -1601,21 +1756,24 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         return GET(url, headersBuilder().build())
     }
 
-    private fun getLibraryType(seriesId: Int): LibraryTypeEnum {
-        return libraryTypeCache[seriesId] ?: run {
+    private fun getLibraryType(seriesId: Int): LibraryTypeEnum =
+        libraryTypeCache[seriesId] ?: run {
             try {
-                val seriesDto = client.newCall(GET("$apiUrl/Series/$seriesId", headersBuilder().build()))
-                    .execute()
-                    .parseAs<SeriesDto>()
-
-                val type = libraryListMeta.find { it.id == seriesDto.libraryId }?.type?.let { typeInt ->
-                    LibraryTypeEnum.fromInt(typeInt)
-                } ?: run {
-                    val library = client.newCall(GET("$apiUrl/Library/${seriesDto.libraryId}", headersBuilder().build()))
+                val seriesDto =
+                    client.newCall(GET("$apiUrl/Series/$seriesId", headersBuilder().build()))
                         .execute()
-                        .parseAs<LibraryDto>()
-                    LibraryTypeEnum.fromInt(library.type)
-                }
+                        .parseAs<SeriesDto>()
+
+                val type =
+                    libraryListMeta.find { it.id == seriesDto.libraryId }?.type?.let { typeInt ->
+                        LibraryTypeEnum.fromInt(typeInt)
+                    } ?: run {
+                        val library =
+                            client.newCall(GET("$apiUrl/Library/${seriesDto.libraryId}", headersBuilder().build()))
+                                .execute()
+                                .parseAs<LibraryDto>()
+                        LibraryTypeEnum.fromInt(library.type)
+                    }
 
                 val result = type ?: LibraryTypeEnum.Manga // Default fallback
                 libraryTypeCache[seriesId] = result
@@ -1625,7 +1783,6 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                 LibraryTypeEnum.Manga // Default fallback
             }
         }
-    }
 
     override fun chapterListParse(response: Response): List<SChapter> {
         val seriesId = response.request.url.queryParameter("seriesId")?.toIntOrNull()
@@ -1640,70 +1797,77 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             val allChapters = mutableListOf<SChapter>()
 
             // Get the series name to use as mangaTitle
-            val seriesName = seriesId?.let { id: Int ->
-                // First try from cache
-                series.find { it.id == id }?.name
-                    ?: runCatching {
-                        client.newCall(GET("$apiUrl/Series/$id", headersBuilder().build()))
-                            .execute().parseAs<SeriesDto>().name
-                    }.getOrNull()
-            } ?: ""
+            val seriesName =
+                seriesId?.let { id: Int ->
+                    // First try from cache
+                    series.find { it.id == id }?.name
+                        ?: runCatching {
+                            client.newCall(GET("$apiUrl/Series/$id", headersBuilder().build()))
+                                .execute().parseAs<SeriesDto>().name
+                        }.getOrNull()
+                } ?: ""
 
             Log.d(LOG_TAG, "Processing chapters for series $seriesId with name: '$seriesName'")
 
             // Get series metadata to determine if it's a webtoon
-            val isWebtoon = seriesId?.let {
-                runCatching<Boolean> {
-                    val meta = client.newCall(GET("$apiUrl/series/metadata?seriesId=$it", headersBuilder().build()))
-                        .execute().parseAs<SeriesDetailPlusDto>()
-                    val genreTitles = meta.genres.map { it.title }
-                    val tagTitles = meta.tags.map { it.title }
+            val isWebtoon =
+                seriesId?.let {
+                    runCatching<Boolean> {
+                        val meta =
+                            client.newCall(GET("$apiUrl/series/metadata?seriesId=$it", headersBuilder().build()))
+                                .execute().parseAs<SeriesDetailPlusDto>()
+                        val genreTitles = meta.genres.map { it.title }
+                        val tagTitles = meta.tags.map { it.title }
 
-                    // Extract demographic and formats information
-                    val triple = helper.extractDemographicAndFormat(genreTitles, tagTitles)
-                    val foundDemographic = triple.first
-                    val foundFormats = triple.second
+                        // Extract demographic and formats information
+                        val triple = helper.extractDemographicAndFormat(genreTitles, tagTitles)
+                        val foundDemographic = triple.first
+                        val foundFormats = triple.second
 
-                    // Get all tags when GroupTags is disabled
-                    val allTagsForGrouping = if (preferences.groupTags) {
-                        emptyList()
-                    } else {
-                        genreTitles + tagTitles
+                        // Get all tags when GroupTags is disabled
+                        val allTagsForGrouping =
+                            if (preferences.groupTags) {
+                                emptyList()
+                            } else {
+                                genreTitles + tagTitles
+                            }
+
+                        // Get library information
+                        val libraryName =
+                            meta.libraryName.takeIf { !it.isNullOrEmpty() }
+                                ?: series.find { it.id == seriesId }?.libraryName
+                                ?: runCatching {
+                                    val seriesDto =
+                                        client.newCall(GET("$apiUrl/Series/$seriesId", headersBuilder().build()))
+                                            .execute().parseAs<SeriesDto>()
+                                    seriesDto.libraryName
+                                }.getOrNull()
+
+                        Log.d(LOG_TAG, "Checking webtoon detection for series $seriesId:")
+                        Log.d(LOG_TAG, "  Genres: $genreTitles")
+                        Log.d(LOG_TAG, "  Tags: $tagTitles")
+                        Log.d(LOG_TAG, "  Library: $libraryName")
+                        Log.d(LOG_TAG, "  Formats: $foundFormats")
+                        Log.d(LOG_TAG, "  Demographic: $foundDemographic")
+                        Log.d(LOG_TAG, "  AllTags (GroupTags off): $allTagsForGrouping")
+
+                        val isWebtoonDetected =
+                            helper.isWebtoonOrLongStrip(
+                                genres = genreTitles,
+                                tags = tagTitles,
+                                libraryName = libraryName,
+                                format = foundFormats.firstOrNull(),
+                                demographic = foundDemographic,
+                                allTags = allTagsForGrouping,
+                            )
+
+                        Log.d(LOG_TAG, "Webtoon detected for series $seriesId: $isWebtoonDetected")
+                        isWebtoonDetected
+                    }.getOrElse {
+                        Log.e(LOG_TAG, "Error checking webtoon status for series $seriesId", it)
+                        false
                     }
-
-                    // Get library information
-                    val libraryName = meta.libraryName.takeIf { !it.isNullOrEmpty() }
-                        ?: series.find { it.id == seriesId }?.libraryName
-                        ?: runCatching {
-                            val seriesDto = client.newCall(GET("$apiUrl/Series/$seriesId", headersBuilder().build()))
-                                .execute().parseAs<SeriesDto>()
-                            seriesDto.libraryName
-                        }.getOrNull()
-
-                    Log.d(LOG_TAG, "Checking webtoon detection for series $seriesId:")
-                    Log.d(LOG_TAG, "  Genres: $genreTitles")
-                    Log.d(LOG_TAG, "  Tags: $tagTitles")
-                    Log.d(LOG_TAG, "  Library: $libraryName")
-                    Log.d(LOG_TAG, "  Formats: $foundFormats")
-                    Log.d(LOG_TAG, "  Demographic: $foundDemographic")
-                    Log.d(LOG_TAG, "  AllTags (GroupTags off): $allTagsForGrouping")
-
-                    val isWebtoonDetected = helper.isWebtoonOrLongStrip(
-                        genres = genreTitles,
-                        tags = tagTitles,
-                        libraryName = libraryName,
-                        format = foundFormats.firstOrNull(),
-                        demographic = foundDemographic,
-                        allTags = allTagsForGrouping,
-                    )
-
-                    Log.d(LOG_TAG, "Webtoon detected for series $seriesId: $isWebtoonDetected")
-                    isWebtoonDetected
-                }.getOrElse {
-                    Log.e(LOG_TAG, "Error checking webtoon status for series $seriesId", it)
-                    false
-                }
-            } ?: false
+                } ?: false
 
             // Pre-populate series map for this series ID to ensure context is available
             seriesId?.let { id: Int ->
@@ -1713,8 +1877,9 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                 } ?: run {
                     // If not in cache, fetch it before processing any volumes
                     runCatching {
-                        val seriesDto = client.newCall(GET("$apiUrl/Series/$id", headersBuilder().build()))
-                            .execute().parseAs<SeriesDto>()
+                        val seriesDto =
+                            client.newCall(GET("$apiUrl/Series/$id", headersBuilder().build()))
+                                .execute().parseAs<SeriesDto>()
                         helper.seriesMap.addSeries(seriesDto)
                     }.onFailure { e ->
                         Log.e(LOG_TAG, "Failed to fetch series $id for context", e)
@@ -1731,24 +1896,26 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                 }
 
                 // Check if this is a Single File Volume
-                val isSingleFileVolume = volume.chapters.size == 1 &&
-                    volume.chapters.first().number == KavitaConstants.UNNUMBERED_VOLUME_STR
+                val isSingleFileVolume =
+                    volume.chapters.size == 1 &&
+                        volume.chapters.first().number == KavitaConstants.UNNUMBERED_VOLUME_STR
 
                 if (isSingleFileVolume) {
                     val chapter = volume.chapters.first()
                     // Pass singleFileVolumeNumber explicitly to trigger SFV logic in helper
-                    val sChapter = helper.chapterFromVolume(
-                        chapter,
-                        volume,
-                        singleFileVolumeNumber = volume.minNumber,
-                        libraryType = libraryType,
-                        isWebtoon = isWebtoon,
-                        mangaTitle = seriesName,
-                        useReleaseDate = preferences.ReleaseDate,
-                        chapterTitleFormat = preferences.chapterTitleFormat,
-                        scanlatorFormat = preferences.scanlatorFormat,
-                        volumePageCount = volume.pages,
-                    )
+                    val sChapter =
+                        helper.chapterFromVolume(
+                            chapter,
+                            volume,
+                            singleFileVolumeNumber = volume.minNumber,
+                            libraryType = libraryType,
+                            isWebtoon = isWebtoon,
+                            mangaTitle = seriesName,
+                            useReleaseDate = preferences.ReleaseDate,
+                            chapterTitleFormat = preferences.chapterTitleFormat,
+                            scanlatorFormat = preferences.scanlatorFormat,
+                            volumePageCount = volume.pages,
+                        )
 
                     // For singleFileVolume, ensure the scanlator field reflects webtoon terminology
                     sChapter.scanlator = if (isWebtoon) "Season" else "Volume"
@@ -1756,16 +1923,17 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                 } else {
                     // Handle Regular Chapters, Issues, and Specials
                     volume.chapters.forEach { chapter ->
-                        val sChapter = helper.chapterFromVolume(
-                            chapter,
-                            volume,
-                            libraryType = libraryType,
-                            isWebtoon = isWebtoon,
-                            mangaTitle = seriesName,
-                            useReleaseDate = preferences.ReleaseDate,
-                            chapterTitleFormat = preferences.chapterTitleFormat,
-                            scanlatorFormat = preferences.scanlatorFormat,
-                        )
+                        val sChapter =
+                            helper.chapterFromVolume(
+                                chapter,
+                                volume,
+                                libraryType = libraryType,
+                                isWebtoon = isWebtoon,
+                                mangaTitle = seriesName,
+                                useReleaseDate = preferences.ReleaseDate,
+                                chapterTitleFormat = preferences.chapterTitleFormat,
+                                scanlatorFormat = preferences.scanlatorFormat,
+                            )
 
                         allChapters.add(sChapter)
                     }
@@ -1795,8 +1963,9 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             val itemsRequest = GET("$apiUrl/ReadingList/items?readingListId=$readingListId", headersBuilder().build())
             val items = client.newCall(itemsRequest).execute().parseAs<List<ReadingListItemDto>>()
 
-            val chapterItem = items.find { it.seriesId == seriesId && it.chapterId != null }
-                ?: throw IOException(intl["error_chapter_not_found"])
+            val chapterItem =
+                items.find { it.seriesId == seriesId && it.chapterId != null }
+                    ?: throw IOException(intl["error_chapter_not_found"])
 
             return GET("$apiUrl/${chapterItem.chapterId}", headersBuilder().build())
         }
@@ -1812,174 +1981,197 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         return GET("$apiUrl/$chapterId", headersBuilder().build())
     }
 
-    override fun fetchPageList(chapter: SChapter): Observable<List<Page>> = runAsObservable {
-        // Check if this is a reading list item (has readingListId in URL)
-        if (chapter.url.contains("readingListId=")) {
-            try {
-                // Extract seriesId from the chapter URL
-                val seriesId = chapter.url.substringAfter("seriesId=").substringBefore("&").toIntOrNull()
-                val readingListId = chapter.url.substringAfter("readingListId=").substringBefore("&").toIntOrNull()
+    override fun fetchPageList(chapter: SChapter): Observable<List<Page>> =
+        runAsObservable {
+            // Check if this is a reading list item (has readingListId in URL)
+            if (chapter.url.contains("readingListId=")) {
+                try {
+                    // Extract seriesId from the chapter URL
+                    val seriesId = chapter.url.substringAfter("seriesId=").substringBefore("&").toIntOrNull()
+                    val readingListId = chapter.url.substringAfter("readingListId=").substringBefore("&").toIntOrNull()
 
-                if (seriesId == null || readingListId == null) {
-                    throw IOException("Invalid reading list item URL")
-                }
-
-                // Get all items in the reading list to find the specific chapter
-                val itemsRequest = GET("$apiUrl/ReadingList/items?readingListId=$readingListId", headersBuilder().build())
-                val items = client.newCall(itemsRequest).await().parseAs<List<ReadingListItemDto>>()
-
-                // Find our specific item in the reading list
-                val listItem = items.find { item ->
-                    when {
-                        chapter.url.contains("chapterId=") ->
-                            item.seriesId == seriesId && item.chapterId == chapter.url.substringAfter("chapterId=").substringBefore("&").toIntOrNull()
-                        chapter.url.contains("volumeId=") ->
-                            item.seriesId == seriesId && item.volumeId == chapter.url.substringAfter("volumeId=").substringBefore("&").toIntOrNull()
-                        else -> false
+                    if (seriesId == null || readingListId == null) {
+                        throw IOException("Invalid reading list item URL")
                     }
-                } ?: throw IOException("Item not found in reading list")
 
-                // Get item details based on type
-                val chapterDetails = when {
-                    listItem.chapterId != null -> {
-                        // Standard chapter
-                        val request = GET("$apiUrl/Chapter?chapterId=${listItem.chapterId}", headersBuilder().build())
-                        client.newCall(request).await().parseAs<ChapterDto>()
-                    }
-                    listItem.volumeId != null -> {
-                        // Volume - get first chapter
-                        val volumeRequest = GET("$apiUrl/Volume/${listItem.volumeId}", headersBuilder().build())
-                        val volume = client.newCall(volumeRequest).await().parseAs<VolumeDto>()
-                        volume.chapters.firstOrNull()?.let {
-                            val chapRequest = GET("$apiUrl/Chapter?chapterId=${it.id}", headersBuilder().build())
-                            client.newCall(chapRequest).await().parseAs<ChapterDto>()
-                        } ?: throw IOException(intl["error_no_chapters_found"])
-                    }
-                    else -> throw IOException(intl["error_invalid_reading_list_item"])
-                }
+                    // Get all items in the reading list to find the specific chapter
+                    val itemsRequest = GET("$apiUrl/ReadingList/items?readingListId=$readingListId", headersBuilder().build())
+                    val items = client.newCall(itemsRequest).await().parseAs<List<ReadingListItemDto>>()
 
-                // Generate pages with consistent URL format
-                return@runAsObservable (0 until chapterDetails.pages).map { i ->
-                    Page(
-                        index = i,
-                        imageUrl = "$apiUrl/Reader/image?chapterId=${chapterDetails.id}&page=$i&extractPdf=true&apiKey=$apiKey",
-                    )
+                    // Find our specific item in the reading list
+                    val listItem =
+                        items.find { item ->
+                            when {
+                                chapter.url.contains("chapterId=") -> {
+                                    item.seriesId == seriesId && item.chapterId == chapter.url.substringAfter("chapterId=").substringBefore("&").toIntOrNull()
+                                }
+
+                                chapter.url.contains("volumeId=") -> {
+                                    item.seriesId == seriesId && item.volumeId == chapter.url.substringAfter("volumeId=").substringBefore("&").toIntOrNull()
+                                }
+
+                                else -> {
+                                    false
+                                }
+                            }
+                        } ?: throw IOException("Item not found in reading list")
+
+                    // Get item details based on type
+                    val chapterDetails =
+                        when {
+                            listItem.chapterId != null -> {
+                                // Standard chapter
+                                val request = GET("$apiUrl/Chapter?chapterId=${listItem.chapterId}", headersBuilder().build())
+                                client.newCall(request).await().parseAs<ChapterDto>()
+                            }
+
+                            listItem.volumeId != null -> {
+                                // Volume - get first chapter
+                                val volumeRequest = GET("$apiUrl/Volume/${listItem.volumeId}", headersBuilder().build())
+                                val volume = client.newCall(volumeRequest).await().parseAs<VolumeDto>()
+                                volume.chapters.firstOrNull()?.let {
+                                    val chapRequest = GET("$apiUrl/Chapter?chapterId=${it.id}", headersBuilder().build())
+                                    client.newCall(chapRequest).await().parseAs<ChapterDto>()
+                                } ?: throw IOException(intl["error_no_chapters_found"])
+                            }
+
+                            else -> {
+                                throw IOException(intl["error_invalid_reading_list_item"])
+                            }
+                        }
+
+                    // Generate pages with consistent URL format
+                    return@runAsObservable (0 until chapterDetails.pages).map { i ->
+                        Page(
+                            index = i,
+                            imageUrl = "$apiUrl/Reader/image?chapterId=${chapterDetails.id}&page=$i&extractPdf=true&apiKey=$apiKey",
+                        )
+                    }
+                } catch (e: Exception) {
+                    Log.e(LOG_TAG, "Error processing reading list item", e)
+                    throw e
                 }
-            } catch (e: Exception) {
-                Log.e(LOG_TAG, "Error processing reading list item", e)
-                throw e
             }
-        }
 
-        // For normal titles
-        try {
-            // Check if this is a volume URL
-            if (chapter.url.contains("/Volume/") || chapter.url.startsWith("volume_")) {
-                val volumeId = when {
-                    chapter.url.startsWith("volume_") -> {
-                        val parts = chapter.url.substringAfter("volume_").split("_", "?")
-                        parts.firstOrNull() ?: throw IOException("Invalid volume URL format")
-                    }
-                    chapter.url.contains("/Volume/") -> {
-                        val parts = chapter.url.substringAfter("/Volume/").split("_", "?")
-                        parts.firstOrNull() ?: throw IOException("Invalid volume URL format")
-                    }
-                    else -> throw IOException("Invalid volume URL format")
-                }
+            // For normal titles
+            try {
+                // Check if this is a volume URL
+                if (chapter.url.contains("/Volume/") || chapter.url.startsWith("volume_")) {
+                    val volumeId =
+                        when {
+                            chapter.url.startsWith("volume_") -> {
+                                val parts = chapter.url.substringAfter("volume_").split("_", "?")
+                                parts.firstOrNull() ?: throw IOException("Invalid volume URL format")
+                            }
 
-                // Get all pages in this volume
-                val volumeRequest = GET("$apiUrl/Volume/$volumeId", headersBuilder().build())
-                val volume = client.newCall(volumeRequest).await().parseAs<VolumeDto>()
-                val matchingChapter = volume.chapters.firstOrNull() // or match a chapterId if available
-                    ?: throw IOException(intl["error_no_chapters_found"])
+                            chapter.url.contains("/Volume/") -> {
+                                val parts = chapter.url.substringAfter("/Volume/").split("_", "?")
+                                parts.firstOrNull() ?: throw IOException("Invalid volume URL format")
+                            }
 
-                val initialPages = (0 until matchingChapter.pages).map { i ->
-                    Page(
-                        index = i,
-                        imageUrl = "$apiUrl/Reader/image?chapterId=${matchingChapter.id}&page=$i&extractPdf=true&apiKey=$apiKey",
-                    )
-                }
+                            else -> {
+                                throw IOException("Invalid volume URL format")
+                            }
+                        }
 
-                val remainingPages = volume.chapters
-                    .sortedBy { it.number.toFloatOrNull() ?: 0f }
-                    .runningFold(initialPages.size) { acc, chapter -> acc + chapter.pages }
-                    .drop(1)
-                    .zip(volume.chapters.sortedBy { it.number.toFloatOrNull() ?: 0f })
-                    .flatMap { (offset, chapter) ->
-                        (0 until chapter.pages).map { i ->
+                    // Get all pages in this volume
+                    val volumeRequest = GET("$apiUrl/Volume/$volumeId", headersBuilder().build())
+                    val volume = client.newCall(volumeRequest).await().parseAs<VolumeDto>()
+                    val matchingChapter =
+                        volume.chapters.firstOrNull() // or match a chapterId if available
+                            ?: throw IOException(intl["error_no_chapters_found"])
+
+                    val initialPages =
+                        (0 until matchingChapter.pages).map { i ->
                             Page(
-                                index = offset - chapter.pages + i,
-                                imageUrl = "$apiUrl/Reader/image?chapterId=${chapter.id}&page=$i&extractPdf=true&apiKey=$apiKey",
+                                index = i,
+                                imageUrl = "$apiUrl/Reader/image?chapterId=${matchingChapter.id}&page=$i&extractPdf=true&apiKey=$apiKey",
                             )
                         }
+
+                    val remainingPages =
+                        volume.chapters
+                            .sortedBy { it.number.toFloatOrNull() ?: 0f }
+                            .runningFold(initialPages.size) { acc, chapter -> acc + chapter.pages }
+                            .drop(1)
+                            .zip(volume.chapters.sortedBy { it.number.toFloatOrNull() ?: 0f })
+                            .flatMap { (offset, chapter) ->
+                                (0 until chapter.pages).map { i ->
+                                    Page(
+                                        index = offset - chapter.pages + i,
+                                        imageUrl = "$apiUrl/Reader/image?chapterId=${chapter.id}&page=$i&extractPdf=true&apiKey=$apiKey",
+                                    )
+                                }
+                            }
+
+                    return@runAsObservable (initialPages + remainingPages).toList()
+                } else {
+                    // Original chapter handling
+                    val chapterId =
+                        when {
+                            chapter.url.startsWith("chapter_") -> chapter.url.substringAfter("chapter_").substringBefore("_").substringBefore("?")
+                            chapter.url.contains("/Chapter/") -> chapter.url.substringAfter("/Chapter/").substringBefore("?")
+                            else -> throw IOException("Invalid chapter URL format")
+                        }
+
+                    val chapterRequest = GET("$apiUrl/Chapter?chapterId=$chapterId", headersBuilder().build())
+                    val response = client.newCall(chapterRequest).await()
+
+                    if (!response.isSuccessful) {
+                        throw IOException("Failed to fetch chapter details: HTTP ${response.code}")
                     }
 
-                return@runAsObservable (initialPages + remainingPages).toList()
-            } else {
-                // Original chapter handling
-                val chapterId = when {
-                    chapter.url.startsWith("chapter_") -> chapter.url.substringAfter("chapter_").substringBefore("_").substringBefore("?")
-                    chapter.url.contains("/Chapter/") -> chapter.url.substringAfter("/Chapter/").substringBefore("?")
-                    else -> throw IOException("Invalid chapter URL format")
-                }
+                    val chapterDetails =
+                        try {
+                            response.parseAs<ChapterDto>()
+                        } catch (e: Exception) {
+                            val errorMessage =
+                                try {
+                                    "${intl["version_exceptions_chapters_parse"]}: ${e.message}"
+                                } catch (ex: Exception) {
+                                    "Failed to parse chapter details: ${e.message}"
+                                }
+                            throw IOException(errorMessage)
+                        }
 
-                val chapterRequest = GET("$apiUrl/Chapter?chapterId=$chapterId", headersBuilder().build())
-                val response = client.newCall(chapterRequest).await()
-
-                if (!response.isSuccessful) {
-                    throw IOException("Failed to fetch chapter details: HTTP ${response.code}")
-                }
-
-                val chapterDetails = try {
-                    response.parseAs<ChapterDto>()
-                } catch (e: Exception) {
-                    val errorMessage = try {
-                        "${intl["version_exceptions_chapters_parse"]}: ${e.message}"
-                    } catch (ex: Exception) {
-                        "Failed to parse chapter details: ${e.message}"
+                    return@runAsObservable (0 until chapterDetails.pages).map { i ->
+                        Page(
+                            index = i,
+                            imageUrl = "$apiUrl/Reader/image?chapterId=$chapterId&page=$i&extractPdf=true&apiKey=$apiKey",
+                        )
                     }
-                    throw IOException(errorMessage)
                 }
-
-                return@runAsObservable (0 until chapterDetails.pages).map { i ->
+            } catch (e: Exception) {
+                // Fallback to using the scanlator field if we can't get chapter details
+                Log.e(LOG_TAG, "Error fetching chapter details, using fallback", e)
+                val fallbackPageCount = chapter.scanlator?.replace(" pages", "")?.toIntOrNull() ?: 1
+                return@runAsObservable (0 until fallbackPageCount).map { i ->
                     Page(
                         index = i,
-                        imageUrl = "$apiUrl/Reader/image?chapterId=$chapterId&page=$i&extractPdf=true&apiKey=$apiKey",
+                        imageUrl = "$apiUrl/Reader/image?chapterId=${helper.cleanChapterUrl(chapter.url)}&page=$i&extractPdf=true&apiKey=$apiKey",
                     )
                 }
             }
-        } catch (e: Exception) {
-            // Fallback to using the scanlator field if we can't get chapter details
-            Log.e(LOG_TAG, "Error fetching chapter details, using fallback", e)
-            val fallbackPageCount = chapter.scanlator?.replace(" pages", "")?.toIntOrNull() ?: 1
-            return@runAsObservable (0 until fallbackPageCount).map { i ->
-                Page(
-                    index = i,
-                    imageUrl = "$apiUrl/Reader/image?chapterId=${helper.cleanChapterUrl(chapter.url)}&page=$i&extractPdf=true&apiKey=$apiKey",
-                )
-            }
         }
-    }
 
-    override fun latestUpdatesParse(response: Response): MangasPage =
-        throw UnsupportedOperationException("Not used")
+    override fun latestUpdatesParse(response: Response): MangasPage = throw UnsupportedOperationException("Not used")
 
-    override fun pageListParse(response: Response): List<Page> =
-        throw UnsupportedOperationException("Not used")
+    override fun pageListParse(response: Response): List<Page> = throw UnsupportedOperationException("Not used")
 
-    override fun searchMangaParse(response: Response): MangasPage {
-        return try {
+    override fun searchMangaParse(response: Response): MangasPage =
+        try {
             val result = response.parseAs<List<SeriesDto>>()
             // Refresh cache with search results for downstream lookups
             series = result
             result.forEach { helper.seriesMap.addSeries(it) }
 
             val allowed = preferences.allowedLibrariesSearch
-            val filteredSeries = if (allowed.isEmpty()) {
-                result
-            } else {
-                result.filter { it.libraryName != null && allowed.contains(it.libraryName) }
-            }
+            val filteredSeries =
+                if (allowed.isEmpty()) {
+                    result
+                } else {
+                    result.filter { it.libraryName != null && allowed.contains(it.libraryName) }
+                }
 
             val mangaList = filteredSeries.map { helper.createSeriesDto(it, apiUrl, apiKey) }
             MangasPage(mangaList, false)
@@ -1988,7 +2180,6 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             // Return empty result instead of throwing exception
             MangasPage(emptyList(), false)
         }
-    }
 
     override fun imageUrlParse(response: Response): String = ""
 
@@ -2040,13 +2231,11 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         people: List<String>,
         pubStatus: List<String>,
         smartFilters: Array<String>,
-    ): FilterList {
-        return FilterList(
+    ): FilterList =
+        FilterList(
             SortFilter(sortableList.map { it.first }.toTypedArray()),
-
             StatusSeparator(),
             StatusFilterGroup(),
-
             // Release year filter
             ReleaseYearRangeGroup(
                 listOf(
@@ -2054,7 +2243,6 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                     ReleaseYearRange("Max"),
                 ),
             ),
-
             GenreFilterGroup(genres.map { GenreFilter(it) }),
             TagFilterGroup(tags.map { TagFilter(it) }),
             CollectionFilterGroup(collections.map { CollectionFilter(it) }),
@@ -2062,20 +2250,16 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             LanguageFilterGroup(languages.map { LanguageFilter(it) }),
             PubStatusFilterGroup(pubStatus.map { PubStatusFilter(it) }),
             AgeRatingFilterGroup(ageRatings.map { AgeRatingFilter(it) }),
-
             UserRating(),
             UserRatingSeparator(),
-
             // Special filters section
             Filter.Header(intl["filters_special"]),
             SpecialListFilter(intl["filters_special_list"]),
             SmartFiltersFilter(smartFilters),
-
         )
-    }
 
-    override fun getFilterList(): FilterList {
-        return getFilterList(
+    override fun getFilterList(): FilterList =
+        getFilterList(
             genres = genresListMeta.map { it.title },
             tags = tagsListMeta.map { it.title },
             ageRatings = ageRatingsListMeta.map { it.title },
@@ -2086,17 +2270,25 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             pubStatus = pubStatusListMeta.map { it.title },
             smartFilters = smartFilters.map { it.name }.toTypedArray(),
         )
-    }
 
-    class LoginErrorException(message: String? = null, cause: Throwable? = null) : Exception(message, cause) {
+    class LoginErrorException(
+        message: String? = null,
+        cause: Throwable? = null,
+    ) : Exception(message, cause) {
         constructor(cause: Throwable) : this(null, cause)
     }
 
-    class EmptyRequestBody(message: String? = null, cause: Throwable? = null) : Exception(message, cause) {
+    class EmptyRequestBody(
+        message: String? = null,
+        cause: Throwable? = null,
+    ) : Exception(message, cause) {
         constructor(cause: Throwable) : this(null, cause)
     }
 
-    class LoadingFilterFailed(message: String? = null, cause: Throwable? = null) : Exception(message, cause) {
+    class LoadingFilterFailed(
+        message: String? = null,
+        cause: Throwable? = null,
+    ) : Exception(message, cause) {
         constructor(cause: Throwable) : this(null, cause)
     }
 
@@ -2111,12 +2303,11 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             .add("Authorization", "Bearer $jwtToken")
     }
 
-    private fun setupLoginHeaders(): Headers.Builder {
-        return Headers.Builder()
+    private fun setupLoginHeaders(): Headers.Builder =
+        Headers.Builder()
             .add("User-Agent", "Tachiyomi Kavita v${AppInfo.getVersionName()}")
             .add("Content-Type", "application/json")
             .add("Accept", "application/json")
-    }
 
     /**
      * Adds the reverse-proxy headers to requests aimed at the configured Kavita origin.
@@ -2129,13 +2320,17 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         if (!request.url.isSameOriginAs(preferences.serverUrl)) {
             return chain.proceed(request)
         }
-        val extra = when (val parsed = parseCustomHttpHeaders(preferences.customHeaders)) {
-            is CustomHeadersParse.Ok -> parsed.headers
-            is CustomHeadersParse.Error -> {
-                Log.w(LOG_TAG, "Ignoring custom HTTP headers: invalid entry on line ${parsed.line}")
-                return chain.proceed(request)
+        val extra =
+            when (val parsed = parseCustomHttpHeaders(preferences.customHeaders)) {
+                is CustomHeadersParse.Ok -> {
+                    parsed.headers
+                }
+
+                is CustomHeadersParse.Error -> {
+                    Log.w(LOG_TAG, "Ignoring custom HTTP headers: invalid entry on line ${parsed.line}")
+                    return chain.proceed(request)
+                }
             }
-        }
         if (extra.size == 0) {
             return chain.proceed(request)
         }
@@ -2162,30 +2357,33 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             port == other.port
 
     override fun setupPreferenceScreen(screen: PreferenceScreen) {
-        val opdsAddressPref = screen.editTextPreference(
-            ADDRESS_TITLE,
-            "OPDS url",
-            "",
-            intl["pref_opds_summary"],
-        )
+        val opdsAddressPref =
+            screen.editTextPreference(
+                ADDRESS_TITLE,
+                "OPDS url",
+                "",
+                intl["pref_opds_summary"],
+            )
 
-        val customSourceNamePref = EditTextPreference(screen.context).apply {
-            key = KavitaConstants.customSourceNamePref
-            title = intl["pref_customsource_title"]
-            summary = intl["pref_edit_customsource_summary"]
-            setOnPreferenceChangeListener { _, newValue ->
-                val res = preferences.edit()
-                    .putString(KavitaConstants.customSourceNamePref, newValue.toString())
-                    .commit()
-                Toast.makeText(
-                    screen.context,
-                    intl["restartapp_settings"],
-                    Toast.LENGTH_LONG,
-                ).show()
-                Log.v(LOG_TAG, "[Preferences] Successfully modified custom source name: $newValue")
-                res
+        val customSourceNamePref =
+            EditTextPreference(screen.context).apply {
+                key = KavitaConstants.customSourceNamePref
+                title = intl["pref_customsource_title"]
+                summary = intl["pref_edit_customsource_summary"]
+                setOnPreferenceChangeListener { _, newValue ->
+                    val res =
+                        preferences.edit()
+                            .putString(KavitaConstants.customSourceNamePref, newValue.toString())
+                            .commit()
+                    Toast.makeText(
+                        screen.context,
+                        intl["restartapp_settings"],
+                        Toast.LENGTH_LONG,
+                    ).show()
+                    Log.v(LOG_TAG, "[Preferences] Successfully modified custom source name: $newValue")
+                    res
+                }
             }
-        }
         screen.addPreference(customSourceNamePref)
         screen.addPreference(opdsAddressPref)
 
@@ -2289,37 +2487,39 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         )
 
         // Library filtering preferences
-        val allowedLibrariesFeedPref = MultiSelectListPreference(screen.context).apply {
-            key = KavitaConstants.allowedLibrariesFeedPref
-            title = intl["pref_allowed_libraries_feed_title"]
-            summary = intl["pref_allowed_libraries_feed_summary"]
-            entries = libraryListMeta.map { it.name }.toTypedArray()
-            entryValues = libraryListMeta.map { it.name }.toTypedArray()
-            setDefaultValue(emptySet<String>())
-            setOnPreferenceChangeListener { _, newValue ->
-                @Suppress("UNCHECKED_CAST")
-                val checkValue = newValue as Set<String>
-                preferences.edit()
-                    .putStringSet(KavitaConstants.allowedLibrariesFeedPref, checkValue)
-                    .commit()
+        val allowedLibrariesFeedPref =
+            MultiSelectListPreference(screen.context).apply {
+                key = KavitaConstants.allowedLibrariesFeedPref
+                title = intl["pref_allowed_libraries_feed_title"]
+                summary = intl["pref_allowed_libraries_feed_summary"]
+                entries = libraryListMeta.map { it.name }.toTypedArray()
+                entryValues = libraryListMeta.map { it.name }.toTypedArray()
+                setDefaultValue(emptySet<String>())
+                setOnPreferenceChangeListener { _, newValue ->
+                    @Suppress("UNCHECKED_CAST")
+                    val checkValue = newValue as Set<String>
+                    preferences.edit()
+                        .putStringSet(KavitaConstants.allowedLibrariesFeedPref, checkValue)
+                        .commit()
+                }
             }
-        }
 
-        val allowedLibrariesSearchPref = MultiSelectListPreference(screen.context).apply {
-            key = KavitaConstants.allowedLibrariesSearchPref
-            title = intl["pref_allowed_libraries_search_title"]
-            summary = intl["pref_allowed_libraries_search_summary"]
-            entries = libraryListMeta.map { it.name }.toTypedArray()
-            entryValues = libraryListMeta.map { it.name }.toTypedArray()
-            setDefaultValue(emptySet<String>())
-            setOnPreferenceChangeListener { _, newValue ->
-                @Suppress("UNCHECKED_CAST")
-                val checkValue = newValue as Set<String>
-                preferences.edit()
-                    .putStringSet(KavitaConstants.allowedLibrariesSearchPref, checkValue)
-                    .commit()
+        val allowedLibrariesSearchPref =
+            MultiSelectListPreference(screen.context).apply {
+                key = KavitaConstants.allowedLibrariesSearchPref
+                title = intl["pref_allowed_libraries_search_title"]
+                summary = intl["pref_allowed_libraries_search_summary"]
+                entries = libraryListMeta.map { it.name }.toTypedArray()
+                entryValues = libraryListMeta.map { it.name }.toTypedArray()
+                setDefaultValue(emptySet<String>())
+                setOnPreferenceChangeListener { _, newValue ->
+                    @Suppress("UNCHECKED_CAST")
+                    val checkValue = newValue as Set<String>
+                    preferences.edit()
+                        .putStringSet(KavitaConstants.allowedLibrariesSearchPref, checkValue)
+                        .commit()
+                }
             }
-        }
 
         screen.addPreference(allowedLibrariesFeedPref)
         screen.addPreference(allowedLibrariesSearchPref)
@@ -2422,7 +2622,9 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
     }
 
     private fun getPrefBaseUrl(): String = preferences.getString("BASEURL", "") ?: ""
+
     private fun getPrefApiUrl(): String = preferences.getString("APIURL", "") ?: ""
+
     private fun getPrefKey(): String = preferences.getString("APIKEY", "") ?: ""
 
     private val SharedPreferences.groupTags: Boolean
@@ -2438,9 +2640,10 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         get() = getBoolean(RELEASE_DATE_PREF, RELEASE_DATE_DEFAULT)
 
     private val SharedPreferences.chapterTitleFormat: String
-        get() = getString(CHAPTER_TITLE_FORMAT_PREF, CHAPTER_TITLE_FORMAT_DEFAULT)
-            .orEmpty()
-            .ifBlank { CHAPTER_TITLE_FORMAT_DEFAULT }
+        get() =
+            getString(CHAPTER_TITLE_FORMAT_PREF, CHAPTER_TITLE_FORMAT_DEFAULT)
+                .orEmpty()
+                .ifBlank { CHAPTER_TITLE_FORMAT_DEFAULT }
 
     private val SharedPreferences.scanlatorFormat: String
         get() = getString(SCANLATOR_FORMAT_PREF, SCANLATOR_FORMAT_DEFAULT) ?: SCANLATOR_FORMAT_DEFAULT
@@ -2450,9 +2653,10 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
 
     /** URL of the configured Kavita server, read fresh so it survives setup order. */
     private val SharedPreferences.serverUrl: HttpUrl?
-        get() = getString("BASEURL", "").orEmpty()
-            .ifBlank { getString(ADDRESS_TITLE, "").orEmpty() }
-            .toHttpUrlOrNull()
+        get() =
+            getString("BASEURL", "").orEmpty()
+                .ifBlank { getString(ADDRESS_TITLE, "").orEmpty() }
+                .toHttpUrlOrNull()
 
     // Library filtering preferences
     private val SharedPreferences.allowedLibrariesFeed: Set<String>
@@ -2520,9 +2724,10 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         val allowedLibrariesSearch = preferences.allowedLibrariesSearch
         val seriesId = helper.getIdFromUrl(manga.url)
 
-        val libraryName = suggestedLibraryName
-            ?: series.find { it.id == seriesId }?.libraryName
-            ?: libraryListMeta.find { it.id == suggestedLibraryId }?.name
+        val libraryName =
+            suggestedLibraryName
+                ?: series.find { it.id == seriesId }?.libraryName
+                ?: libraryListMeta.find { it.id == suggestedLibraryId }?.name
 
         if (libraryName == null) {
             Log.d(LOG_TAG, "Suggestion '${manga.title}' BLOCKED: no library information available")
@@ -2632,11 +2837,12 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
      * This is a limitation needed for tracking.
      * **/
     private fun opdsUrlInPreferences(url: String): String {
-        val candidateApiUrl = try {
-            parseOpdsUrl(url).apiUrl
-        } catch (_: Exception) {
-            return ""
-        }
+        val candidateApiUrl =
+            try {
+                parseOpdsUrl(url).apiUrl
+            } catch (_: Exception) {
+                return ""
+            }
 
         for (sourceId in 1..3) { // There's 3 sources so 3 preferences to check
             val sourceSuffixID by lazy {
@@ -2764,18 +2970,20 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
 
         // Snapshot generation + API base + key under tokenLock so they stay consistent
         // with each other for the duration of this attempt.
-        val (generation, snapshotApiUrl, snapshotKey) = synchronized(tokenLock) {
-            if (jwtToken.isEmpty()) setupLogin()
-            Triple(loginGeneration.get(), apiUrl, getPrefKey())
-        }
+        val (generation, snapshotApiUrl, snapshotKey) =
+            synchronized(tokenLock) {
+                if (jwtToken.isEmpty()) setupLogin()
+                Triple(loginGeneration.get(), apiUrl, getPrefKey())
+            }
 
         // OkHttp must not auto-follow redirects: a 301/302 would rewrite this POST into a
         // GET, Kavita only allows POST on Plugin/authenticate, and the server log then
         // shows a 404 GET — the failure mode reported in Kareadita/tach-extension#54.
-        val noRedirectClient = client.newBuilder()
-            .followRedirects(false)
-            .followSslRedirects(false)
-            .build()
+        val noRedirectClient =
+            client.newBuilder()
+                .followRedirects(false)
+                .followSslRedirects(false)
+                .build()
 
         synchronized(loginLock) {
             // Re-check under lock: a concurrent login may have already completed.
@@ -2795,39 +3003,42 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
             var pendingAddress: String? = null
             repeat(2) {
                 Log.v(LOG_TAG, "[Login] POST ${OpdsUrlParser.redact(attemptUrl)}")
-                val request = POST(
-                    attemptUrl,
-                    setupLoginHeaders().build(),
-                    "{}".toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull()),
-                )
+                val request =
+                    POST(
+                        attemptUrl,
+                        setupLoginHeaders().build(),
+                        "{}".toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull()),
+                    )
                 noRedirectClient.newCall(request).execute().use { response ->
                     when {
                         response.isSuccessful -> {
-                            val token = try {
-                                response.parseAs<AuthenticationDto>().token
-                            } catch (e: Exception) {
-                                Log.e(LOG_TAG, "Possible outdated kavita", e)
-                                throw IOException(intl["login_errors_parse_tokendto"])
-                            }
-                            val stale = synchronized(tokenLock) {
-                                if (generation != loginGeneration.get()) {
-                                    true
-                                } else {
-                                    val api = pendingApiUrl
-                                    val base = pendingBaseUrl
-                                    val addr = pendingAddress
-                                    if (api != null && base != null && addr != null) {
-                                        preferences.edit()
-                                            .putString("APIURL", api)
-                                            .putString("BASEURL", base)
-                                            .putString(ADDRESS_TITLE, addr)
-                                            .apply()
-                                    }
-                                    jwtToken = token
-                                    isLogged = true
-                                    false
+                            val token =
+                                try {
+                                    response.parseAs<AuthenticationDto>().token
+                                } catch (e: Exception) {
+                                    Log.e(LOG_TAG, "Possible outdated kavita", e)
+                                    throw IOException(intl["login_errors_parse_tokendto"])
                                 }
-                            }
+                            val stale =
+                                synchronized(tokenLock) {
+                                    if (generation != loginGeneration.get()) {
+                                        true
+                                    } else {
+                                        val api = pendingApiUrl
+                                        val base = pendingBaseUrl
+                                        val addr = pendingAddress
+                                        if (api != null && base != null && addr != null) {
+                                            preferences.edit()
+                                                .putString("APIURL", api)
+                                                .putString("BASEURL", base)
+                                                .putString(ADDRESS_TITLE, addr)
+                                                .apply()
+                                        }
+                                        jwtToken = token
+                                        isLogged = true
+                                        false
+                                    }
+                                }
                             if (stale) {
                                 Log.w(LOG_TAG, "[Login] discarding stale login result")
                                 throw LoginErrorException(intl["login_errors_settings_changed"])
@@ -2835,35 +3046,41 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                             Log.v(LOG_TAG, "[Login] Login successful")
                             return
                         }
+
                         response.code in 300..399 -> {
-                            val location = response.header("Location")
-                                ?: throw LoginErrorException("${intl["login_errors_redirected"]} (no Location header)")
+                            val location =
+                                response.header("Location")
+                                    ?: throw LoginErrorException("${intl["login_errors_redirected"]} (no Location header)")
                             val redactedLocation = OpdsUrlParser.redact(location)
                             Log.w(LOG_TAG, "[LOGIN] ${response.code} redirect -> $redactedLocation")
                             if (redirectedOnce) {
                                 throw LoginErrorException("${intl["login_errors_redirected"]} $redactedLocation")
                             }
-                            val correctedApi = OpdsUrlParser.resolveRedirectedApiUrl(attemptUrl, location)
-                                ?: throw LoginErrorException("${intl["login_errors_redirected"]} $redactedLocation")
+                            val correctedApi =
+                                OpdsUrlParser.resolveRedirectedApiUrl(attemptUrl, location)
+                                    ?: throw LoginErrorException("${intl["login_errors_redirected"]} $redactedLocation")
                             // Persist only if the API root ends in /api (case-insensitive); otherwise
                             // the stored Address shape (<base>/api/opds/<key>) cannot represent it.
-                            val base = correctedApi
-                                .takeIf { it.endsWith("/api", ignoreCase = true) }
-                                ?.dropLast(4)
-                                ?.removeSuffix("/")
-                                ?: throw LoginErrorException("${intl["login_errors_redirected"]} $redactedLocation")
+                            val base =
+                                correctedApi
+                                    .takeIf { it.endsWith("/api", ignoreCase = true) }
+                                    ?.dropLast(4)
+                                    ?.removeSuffix("/")
+                                    ?: throw LoginErrorException("${intl["login_errors_redirected"]} $redactedLocation")
                             pendingApiUrl = correctedApi
                             pendingBaseUrl = base
                             pendingAddress = "$base/api/opds/$snapshotKey"
                             attemptUrl = OpdsUrlParser.buildAuthenticateUrl(correctedApi, snapshotKey)
                             redirectedOnce = true
                         }
+
                         else -> {
-                            val bodyPreview = try {
-                                response.peekBody(512).string()
-                            } catch (_: Exception) {
-                                ""
-                            }
+                            val bodyPreview =
+                                try {
+                                    response.peekBody(512).string()
+                                } catch (_: Exception) {
+                                    ""
+                                }
                             Log.e(
                                 LOG_TAG,
                                 "[LOGIN] failed code=${response.code} message=${response.message} body=${OpdsUrlParser.redact(bodyPreview)}",
@@ -2910,7 +3127,10 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
 
         val failures = AtomicInteger(0)
 
-        fun <T> loadIfCurrent(label: String, block: () -> T): T? {
+        fun <T> loadIfCurrent(
+            label: String,
+            block: () -> T,
+        ): T? {
             if (generation != loginGeneration.get()) return null
             return try {
                 block().also { Log.d(LOG_TAG, "Loaded $label") }
@@ -2922,53 +3142,54 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         }
 
         coroutineScope {
-            val deferredFilters = listOf(
-                async {
-                    loadIfCurrent("genres") {
-                        loadMetadata<List<MetadataGenres>>("$baseApi/Metadata/genres", generation)
-                    }?.let { if (generation == loginGeneration.get()) genresListMeta = it }
-                },
-                async {
-                    loadIfCurrent("tags") {
-                        loadMetadata<List<MetadataTag>>("$baseApi/Metadata/tags", generation)
-                    }?.let { if (generation == loginGeneration.get()) tagsListMeta = it }
-                },
-                async {
-                    loadIfCurrent("age ratings") {
-                        loadMetadata<List<MetadataAgeRatings>>("$baseApi/Metadata/age-ratings", generation)
-                    }?.let { if (generation == loginGeneration.get()) ageRatingsListMeta = it }
-                },
-                async {
-                    loadIfCurrent("collections") {
-                        loadMetadata<List<MetadataCollections>>("$baseApi/Collection", generation)
-                    }?.let { if (generation == loginGeneration.get()) collectionsListMeta = it }
-                },
-                async {
-                    loadIfCurrent("languages") {
-                        loadMetadata<List<MetadataLanguages>>("$baseApi/Metadata/languages", generation)
-                    }?.let { if (generation == loginGeneration.get()) languagesListMeta = it }
-                },
-                async {
-                    loadIfCurrent("libraries") {
-                        loadMetadata<List<MetadataLibrary>>("$baseApi/Library/libraries", generation)
-                    }?.let { if (generation == loginGeneration.get()) libraryListMeta = it }
-                },
-                async {
-                    loadIfCurrent("people") {
-                        loadMetadata<List<MetadataPeople>>("$baseApi/Metadata/people", generation)
-                    }?.let { if (generation == loginGeneration.get()) peopleListMeta = it }
-                },
-                async {
-                    loadIfCurrent("publication statuses") {
-                        loadMetadata<List<MetadataPubStatus>>("$baseApi/Metadata/publication-status", generation)
-                    }?.let { if (generation == loginGeneration.get()) pubStatusListMeta = it }
-                },
-                async {
-                    loadIfCurrent("smart filters") {
-                        loadMetadata<List<SmartFilter>>("$baseApi/filter", generation)
-                    }?.let { if (generation == loginGeneration.get()) smartFilters = it }
-                },
-            )
+            val deferredFilters =
+                listOf(
+                    async {
+                        loadIfCurrent("genres") {
+                            loadMetadata<List<MetadataGenres>>("$baseApi/Metadata/genres", generation)
+                        }?.let { if (generation == loginGeneration.get()) genresListMeta = it }
+                    },
+                    async {
+                        loadIfCurrent("tags") {
+                            loadMetadata<List<MetadataTag>>("$baseApi/Metadata/tags", generation)
+                        }?.let { if (generation == loginGeneration.get()) tagsListMeta = it }
+                    },
+                    async {
+                        loadIfCurrent("age ratings") {
+                            loadMetadata<List<MetadataAgeRatings>>("$baseApi/Metadata/age-ratings", generation)
+                        }?.let { if (generation == loginGeneration.get()) ageRatingsListMeta = it }
+                    },
+                    async {
+                        loadIfCurrent("collections") {
+                            loadMetadata<List<MetadataCollections>>("$baseApi/Collection", generation)
+                        }?.let { if (generation == loginGeneration.get()) collectionsListMeta = it }
+                    },
+                    async {
+                        loadIfCurrent("languages") {
+                            loadMetadata<List<MetadataLanguages>>("$baseApi/Metadata/languages", generation)
+                        }?.let { if (generation == loginGeneration.get()) languagesListMeta = it }
+                    },
+                    async {
+                        loadIfCurrent("libraries") {
+                            loadMetadata<List<MetadataLibrary>>("$baseApi/Library/libraries", generation)
+                        }?.let { if (generation == loginGeneration.get()) libraryListMeta = it }
+                    },
+                    async {
+                        loadIfCurrent("people") {
+                            loadMetadata<List<MetadataPeople>>("$baseApi/Metadata/people", generation)
+                        }?.let { if (generation == loginGeneration.get()) peopleListMeta = it }
+                    },
+                    async {
+                        loadIfCurrent("publication statuses") {
+                            loadMetadata<List<MetadataPubStatus>>("$baseApi/Metadata/publication-status", generation)
+                        }?.let { if (generation == loginGeneration.get()) pubStatusListMeta = it }
+                    },
+                    async {
+                        loadIfCurrent("smart filters") {
+                            loadMetadata<List<SmartFilter>>("$baseApi/filter", generation)
+                        }?.let { if (generation == loginGeneration.get()) smartFilters = it }
+                    },
+                )
             deferredFilters.awaitAll()
         }
 
@@ -2986,9 +3207,10 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         }
 
         try {
-            val serverInfoDto = client.newCall(GET("$baseApi/Server/server-info-slim", headersBuilder().build()))
-                .execute()
-                .parseAs<ServerInfoDto>()
+            val serverInfoDto =
+                client.newCall(GET("$baseApi/Server/server-info-slim", headersBuilder().build()))
+                    .execute()
+                    .parseAs<ServerInfoDto>()
             Log.d(LOG_TAG, "Kavita version: ${serverInfoDto.kavitaVersion}")
         } catch (e: Exception) {
             Log.e(LOG_TAG, "Failed to get server info", e)
@@ -3050,9 +3272,10 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
         }
 
         Log.d(LOG_TAG, "Fetching fresh metadata for ${T::class.simpleName} from $url")
-        val data = client.newCall(GET(url, headersBuilder().build()))
-            .execute()
-            .parseAs<T>()
+        val data =
+            client.newCall(GET(url, headersBuilder().build()))
+                .execute()
+                .parseAs<T>()
 
         if (expectedGeneration == null || expectedGeneration == loginGeneration.get()) {
             metadataCache[cacheKey] = CacheEntry(data)

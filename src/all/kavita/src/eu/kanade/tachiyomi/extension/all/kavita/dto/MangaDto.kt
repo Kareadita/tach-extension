@@ -6,11 +6,17 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 interface ConvertibleToSManga {
-    fun toSManga(baseUrl: String, apiUrl: String, apiKey: String): SManga
+    fun toSManga(
+        baseUrl: String,
+        apiUrl: String,
+        apiKey: String,
+    ): SManga
 }
 
 @Serializable // https://github.com/Kareadita/Kavita/blob/develop/API/Entities/Enums/MangaFormat.cs
-enum class MangaFormat(val format: Int) {
+enum class MangaFormat(
+    val format: Int,
+) {
     Image(0),
     Archive(1),
     Unknown(2),
@@ -31,7 +37,9 @@ data class LibraryDto(
 )
 
 @Serializable // https://github.com/Kareadita/Kavita/blob/develop/API/Entities/Enums/LibraryType.cs
-enum class LibraryTypeEnum(val type: Int) {
+enum class LibraryTypeEnum(
+    val type: Int,
+) {
     Manga(0),
     Comic(1),
     Book(2),
@@ -42,6 +50,7 @@ enum class LibraryTypeEnum(val type: Int) {
 
     companion object {
         private val map = values().associateBy(LibraryTypeEnum::type)
+
         fun fromInt(type: Int) = map[type]
     }
 }
@@ -81,13 +90,12 @@ data class SeriesDetailPlusDto(
     val ratings: List<RatingDto> = emptyList(),
 ) {
     // Helper function to get the library name from SeriesDto if needed
-    fun getLibraryName(seriesDto: SeriesDto?): String? {
-        return if (!libraryName.isNullOrEmpty()) {
+    fun getLibraryName(seriesDto: SeriesDto?): String? =
+        if (!libraryName.isNullOrEmpty()) {
             libraryName
         } else {
             seriesDto?.libraryName
         }
-    }
 }
 
 @Serializable
@@ -167,15 +175,21 @@ data class RelatedSeriesItem(
     val libraryName: String? = null,
     val format: Int = 0,
 ) : ConvertibleToSManga {
-    override fun toSManga(baseUrl: String, apiUrl: String, apiKey: String): SManga = SManga.create().apply {
-        title = name
-        url = "$baseUrl/Series/$id"
-        thumbnail_url = when {
-            !coverImage.isNullOrBlank() && (coverImage.startsWith("http://") || coverImage.startsWith("https://")) -> coverImage
-            else -> "$apiUrl/image/series-cover?seriesId=$id&apiKey=$apiKey"
+    override fun toSManga(
+        baseUrl: String,
+        apiUrl: String,
+        apiKey: String,
+    ): SManga =
+        SManga.create().apply {
+            title = name
+            url = "$baseUrl/Series/$id"
+            thumbnail_url =
+                when {
+                    !coverImage.isNullOrBlank() && (coverImage.startsWith("http://") || coverImage.startsWith("https://")) -> coverImage
+                    else -> "$apiUrl/image/series-cover?seriesId=$id&apiKey=$apiKey"
+                }
+            initialized = true
         }
-        initialized = true
-    }
 }
 
 @Serializable
@@ -211,24 +225,42 @@ enum class ChapterType {
     companion object {
         private const val UNNUMBERED_VOLUME_NUMBER = -100_000
 
-        fun of(chapter: ChapterDto, volume: VolumeDto, libraryType: LibraryTypeEnum? = null): ChapterType =
+        fun of(
+            chapter: ChapterDto,
+            volume: VolumeDto,
+            libraryType: LibraryTypeEnum? = null,
+        ): ChapterType =
             when {
                 // Special
                 volume.minNumber.toInt() == KavitaConstants.SPECIAL_NUMBER ||
-                    chapter.minNumber.toInt() == KavitaConstants.SPECIAL_NUMBER -> Special
-                // Issue
-                volume.minNumber.toInt() == UNNUMBERED_VOLUME_NUMBER -> when (libraryType) {
-                    LibraryTypeEnum.Comic, LibraryTypeEnum.ComicVine -> Issue
-                    else -> Chapter
+                    chapter.minNumber.toInt() == KavitaConstants.SPECIAL_NUMBER -> {
+                    Special
                 }
+
+                // Issue
+                volume.minNumber.toInt() == UNNUMBERED_VOLUME_NUMBER -> {
+                    when (libraryType) {
+                        LibraryTypeEnum.Comic, LibraryTypeEnum.ComicVine -> Issue
+                        else -> Chapter
+                    }
+                }
+
                 // SingleFileVolume
-                chapter.number == KavitaConstants.UNNUMBERED_VOLUME_STR -> SingleFileVolume
+                chapter.number == KavitaConstants.UNNUMBERED_VOLUME_STR -> {
+                    SingleFileVolume
+                }
+
                 // Regular
-                volume.minNumber > 0 -> Regular
+                volume.minNumber > 0 -> {
+                    Regular
+                }
+
                 // Everything else depends on library type
-                else -> when (libraryType) {
-                    LibraryTypeEnum.Comic, LibraryTypeEnum.ComicVine -> Issue
-                    else -> Chapter
+                else -> {
+                    when (libraryType) {
+                        LibraryTypeEnum.Comic, LibraryTypeEnum.ComicVine -> Issue
+                        else -> Chapter
+                    }
                 }
             }
     }

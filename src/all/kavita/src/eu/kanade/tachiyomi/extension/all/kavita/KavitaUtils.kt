@@ -11,8 +11,8 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
 
-fun parseDateSafe(date: String?): Long {
-    return date?.let {
+fun parseDateSafe(date: String?): Long =
+    date?.let {
         try {
             val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
             sdf.timeZone = TimeZone.getTimeZone("UTC")
@@ -21,7 +21,6 @@ fun parseDateSafe(date: String?): Long {
             0L
         }
     } ?: 0L
-}
 
 fun PreferenceScreen.addEditTextPreference(
     title: String,
@@ -50,9 +49,19 @@ fun PreferenceScreen.addEditTextPreference(
             if (validate != null) {
                 editText.addTextChangedListener(
                     object : TextWatcher {
-                        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                        override fun beforeTextChanged(
+                            s: CharSequence?,
+                            start: Int,
+                            count: Int,
+                            after: Int,
+                        ) {}
 
-                        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                        override fun onTextChanged(
+                            s: CharSequence?,
+                            start: Int,
+                            before: Int,
+                            count: Int,
+                        ) {}
 
                         override fun afterTextChanged(editable: Editable?) {
                             requireNotNull(editable)
@@ -89,30 +98,35 @@ fun PreferenceScreen.addEditTextPreference(
 }
 
 internal sealed interface CustomHeadersParse {
-    data class Ok(val headers: Headers) : CustomHeadersParse
+    data class Ok(
+        val headers: Headers,
+    ) : CustomHeadersParse
 
     /** [line] is 1-based. The offending text is not kept since it may contain a secret. */
-    data class Error(val line: Int) : CustomHeadersParse
+    data class Error(
+        val line: Int,
+    ) : CustomHeadersParse
 }
 
 /**
  * Managed by the extension (`Authorization` carries the Kavita JWT) or by OkHttp, which encodes
  * the body and connection based on them; a user override would break requests.
  */
-private val reservedCustomHeaders = setOf(
-    "authorization",
-    "host",
-    "content-type",
-    "content-length",
-    "transfer-encoding",
-    "accept-encoding",
-    "connection",
-    "keep-alive",
-    "proxy-connection",
-    "te",
-    "trailer",
-    "upgrade",
-)
+private val reservedCustomHeaders =
+    setOf(
+        "authorization",
+        "host",
+        "content-type",
+        "content-length",
+        "transfer-encoding",
+        "accept-encoding",
+        "connection",
+        "keep-alive",
+        "proxy-connection",
+        "te",
+        "trailer",
+        "upgrade",
+    )
 
 /**
  * Parses user-supplied reverse-proxy headers.
@@ -140,5 +154,4 @@ internal fun parseCustomHttpHeaders(raw: String): CustomHeadersParse {
     return CustomHeadersParse.Ok(builder.build())
 }
 
-internal fun isValidCustomHttpHeaders(raw: String): Boolean =
-    parseCustomHttpHeaders(raw) is CustomHeadersParse.Ok
+internal fun isValidCustomHttpHeaders(raw: String): Boolean = parseCustomHttpHeaders(raw) is CustomHeadersParse.Ok

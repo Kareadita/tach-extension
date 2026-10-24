@@ -41,79 +41,79 @@ class OpdsUrlParserSuccessTest(
     companion object {
         @JvmStatic
         @Parameterized.Parameters(name = "{index}: {0}")
-        fun data(): Collection<Array<Any>> = listOf(
-            // basic https
-            arrayOf(
-                "https://kavita.example.com/api/opds/my-api-key",
-                "https://kavita.example.com",
-                "my-api-key",
-            ),
-            // http with port
-            arrayOf(
-                "http://192.168.1.5:5000/api/opds/abc",
-                "http://192.168.1.5:5000",
-                "abc",
-            ),
-            // base path under reverse proxy
-            arrayOf(
-                "https://example.com/kavita/api/opds/key1",
-                "https://example.com/kavita",
-                "key1",
-            ),
-            // double slash from HostName trailing slash
-            arrayOf(
-                "https://kavita.example.com//api/opds/key",
-                "https://kavita.example.com",
-                "key",
-            ),
-            // double slash before base path (origin ends with /, baseUrl = /kavita/)
-            arrayOf(
-                "https://host//kavita/api/opds/key",
-                "https://host/kavita",
-                "key",
-            ),
-            // trailing slash on OPDS url
-            arrayOf(
-                "https://host/api/opds/key/",
-                "https://host",
-                "key",
-            ),
-            // case-insensitive api/opds segment (key case preserved)
-            arrayOf(
-                "https://host/API/OPDS/KeyCase",
-                "https://host",
-                "KeyCase",
-            ),
-            // whitespace trimmed
-            arrayOf(
-                "  https://host/api/opds/key  ",
-                "https://host",
-                "key",
-            ),
-            // query suffix after key is ignored
-            arrayOf(
-                "https://host/api/opds/key?x=1",
-                "https://host",
-                "key",
-            ),
-            // multi-segment base path
-            arrayOf(
-                "https://host/a/b/api/opds/key",
-                "https://host/a/b",
-                "key",
-            ),
-            // base path that itself contains "api"
-            arrayOf(
-                "https://host/api/kavita/api/opds/key",
-                "https://host/api/kavita",
-                "key",
-            ),
-        )
+        fun data(): Collection<Array<Any>> =
+            listOf(
+                // basic https
+                arrayOf(
+                    "https://kavita.example.com/api/opds/my-api-key",
+                    "https://kavita.example.com",
+                    "my-api-key",
+                ),
+                // http with port
+                arrayOf(
+                    "http://192.168.1.5:5000/api/opds/abc",
+                    "http://192.168.1.5:5000",
+                    "abc",
+                ),
+                // base path under reverse proxy
+                arrayOf(
+                    "https://example.com/kavita/api/opds/key1",
+                    "https://example.com/kavita",
+                    "key1",
+                ),
+                // double slash from HostName trailing slash
+                arrayOf(
+                    "https://kavita.example.com//api/opds/key",
+                    "https://kavita.example.com",
+                    "key",
+                ),
+                // double slash before base path (origin ends with /, baseUrl = /kavita/)
+                arrayOf(
+                    "https://host//kavita/api/opds/key",
+                    "https://host/kavita",
+                    "key",
+                ),
+                // trailing slash on OPDS url
+                arrayOf(
+                    "https://host/api/opds/key/",
+                    "https://host",
+                    "key",
+                ),
+                // case-insensitive api/opds segment (key case preserved)
+                arrayOf(
+                    "https://host/API/OPDS/KeyCase",
+                    "https://host",
+                    "KeyCase",
+                ),
+                // whitespace trimmed
+                arrayOf(
+                    "  https://host/api/opds/key  ",
+                    "https://host",
+                    "key",
+                ),
+                // query suffix after key is ignored
+                arrayOf(
+                    "https://host/api/opds/key?x=1",
+                    "https://host",
+                    "key",
+                ),
+                // multi-segment base path
+                arrayOf(
+                    "https://host/a/b/api/opds/key",
+                    "https://host/a/b",
+                    "key",
+                ),
+                // base path that itself contains "api"
+                arrayOf(
+                    "https://host/api/kavita/api/opds/key",
+                    "https://host/api/kavita",
+                    "key",
+                ),
+            )
     }
 }
 
 class OpdsUrlParserRedactTest {
-
     @Test
     fun `redact hides api key on happy path`() {
         val redacted = OpdsUrlParser.redact("https://host/api/opds/secret-key-value")
@@ -151,9 +151,10 @@ class OpdsUrlParserRedactTest {
 
     @Test
     fun `redact hides apiKey query parameter`() {
-        val redacted = OpdsUrlParser.redact(
-            "https://host/api/Plugin/authenticate?apiKey=secret-key-value&pluginName=Tachiyomi-Kavita",
-        )
+        val redacted =
+            OpdsUrlParser.redact(
+                "https://host/api/Plugin/authenticate?apiKey=secret-key-value&pluginName=Tachiyomi-Kavita",
+            )
         assertEquals(
             "https://host/api/Plugin/authenticate?apiKey=***&pluginName=Tachiyomi-Kavita",
             redacted,
@@ -163,9 +164,10 @@ class OpdsUrlParserRedactTest {
 
     @Test
     fun `redact hides both path and query key forms`() {
-        val redacted = OpdsUrlParser.redact(
-            "https://host/api/opds/path-secret?apiKey=query-secret",
-        )
+        val redacted =
+            OpdsUrlParser.redact(
+                "https://host/api/opds/path-secret?apiKey=query-secret",
+            )
         assertFalse(redacted.contains("path-secret"))
         assertFalse(redacted.contains("query-secret"))
         assertEquals("https://host/api/opds/***?apiKey=***", redacted)
@@ -194,9 +196,10 @@ class OpdsUrlParserFailureTest(
 ) {
     @Test
     fun `rejects invalid input without leaking key material`() {
-        val e = assertThrows(expected) {
-            OpdsUrlParser.parse(input)
-        }
+        val e =
+            assertThrows(expected) {
+                OpdsUrlParser.parse(input)
+            }
         // Most messages are short codes ("bad_form", "missing_scheme"); InvalidUrl may
         // embed a redacted URL. Guard against embedding the raw input / API key.
         val message = e.message.orEmpty()
@@ -205,10 +208,11 @@ class OpdsUrlParserFailureTest(
             input.isNotEmpty() && message.contains(input),
         )
         // If the input looked like it had a key segment, the key itself must not appear.
-        val possibleKey = input.substringAfterLast("/api/opds/", missingDelimiterValue = "")
-            .substringBefore('?')
-            .substringBefore('#')
-            .trim('/')
+        val possibleKey =
+            input.substringAfterLast("/api/opds/", missingDelimiterValue = "")
+                .substringBefore('?')
+                .substringBefore('#')
+                .trim('/')
         if (possibleKey.isNotEmpty() && possibleKey != input) {
             assertFalse(
                 "ParseException message must not contain API key material: $message",
@@ -233,23 +237,24 @@ class OpdsUrlParserFailureTest(
     companion object {
         @JvmStatic
         @Parameterized.Parameters(name = "{index}: {0}")
-        fun data(): Collection<Array<Any>> = listOf(
-            arrayOf("", OpdsUrlParser.ParseException.BadForm::class.java),
-            arrayOf("not-a-url", OpdsUrlParser.ParseException.MissingScheme::class.java),
-            arrayOf("192.168.1.5:5000/api/opds/key", OpdsUrlParser.ParseException.MissingScheme::class.java),
-            arrayOf("https://host/opds/key", OpdsUrlParser.ParseException.BadForm::class.java),
-            arrayOf("https://host/api/opds/", OpdsUrlParser.ParseException.BadForm::class.java),
-            arrayOf("https://host/api/opds", OpdsUrlParser.ParseException.BadForm::class.java),
-            arrayOf("https://host/api/opds/key/extra", OpdsUrlParser.ParseException.BadForm::class.java),
-            // InvalidUrl: host that okhttp rejects (message must not leak key or userinfo)
-            arrayOf("https://[bad/api/opds/key", OpdsUrlParser.ParseException.InvalidUrl::class.java),
-            arrayOf("https://user:pass@[bad/api/opds/key", OpdsUrlParser.ParseException.InvalidUrl::class.java),
-            // Query form is not accepted — BadForm, not a successful parse
-            arrayOf("https://host/opds?apiKey=SECRET", OpdsUrlParser.ParseException.BadForm::class.java),
-            arrayOf("https://host/api/opds?apiKey=SECRET", OpdsUrlParser.ParseException.BadForm::class.java),
-            // /api/opds/ must not match inside a query string
-            arrayOf("https://host/path?next=/api/opds/secret", OpdsUrlParser.ParseException.BadForm::class.java),
-        )
+        fun data(): Collection<Array<Any>> =
+            listOf(
+                arrayOf("", OpdsUrlParser.ParseException.BadForm::class.java),
+                arrayOf("not-a-url", OpdsUrlParser.ParseException.MissingScheme::class.java),
+                arrayOf("192.168.1.5:5000/api/opds/key", OpdsUrlParser.ParseException.MissingScheme::class.java),
+                arrayOf("https://host/opds/key", OpdsUrlParser.ParseException.BadForm::class.java),
+                arrayOf("https://host/api/opds/", OpdsUrlParser.ParseException.BadForm::class.java),
+                arrayOf("https://host/api/opds", OpdsUrlParser.ParseException.BadForm::class.java),
+                arrayOf("https://host/api/opds/key/extra", OpdsUrlParser.ParseException.BadForm::class.java),
+                // InvalidUrl: host that okhttp rejects (message must not leak key or userinfo)
+                arrayOf("https://[bad/api/opds/key", OpdsUrlParser.ParseException.InvalidUrl::class.java),
+                arrayOf("https://user:pass@[bad/api/opds/key", OpdsUrlParser.ParseException.InvalidUrl::class.java),
+                // Query form is not accepted — BadForm, not a successful parse
+                arrayOf("https://host/opds?apiKey=SECRET", OpdsUrlParser.ParseException.BadForm::class.java),
+                arrayOf("https://host/api/opds?apiKey=SECRET", OpdsUrlParser.ParseException.BadForm::class.java),
+                // /api/opds/ must not match inside a query string
+                arrayOf("https://host/path?next=/api/opds/secret", OpdsUrlParser.ParseException.BadForm::class.java),
+            )
     }
 }
 
@@ -267,91 +272,92 @@ class ResolveRedirectedApiUrlTest(
     companion object {
         @JvmStatic
         @Parameterized.Parameters(name = "{index}: {1}")
-        fun data(): Collection<Array<Any?>> = listOf(
-            // trailing-slash / scheme canonicalization on same host
-            arrayOf(
-                "https://host/api/Plugin/authenticate?apiKey=k",
-                "https://host/api/Plugin/authenticate",
-                "https://host/api",
-            ),
-            // base path preserved
-            arrayOf(
-                "https://host/kavita/api/Plugin/authenticate?apiKey=k",
-                "https://host/kavita/api/Plugin/authenticate",
-                "https://host/kavita/api",
-            ),
-            // relative Location (root-relative)
-            arrayOf(
-                "https://host/api/Plugin/authenticate?apiKey=k",
-                "/api/Plugin/authenticate",
-                "https://host/api",
-            ),
-            // path-relative Location under a sub-path base
-            arrayOf(
-                "https://host/kavita/api/Plugin/authenticate?apiKey=k",
-                "../../api/Plugin/authenticate",
-                "https://host/kavita/api",
-            ),
-            // port preserved when non-default
-            arrayOf(
-                "https://host:8443/api/Plugin/authenticate?apiKey=k",
-                "https://host:8443/api/Plugin/authenticate",
-                "https://host:8443/api",
-            ),
-            // IPv6 literal must keep brackets in the rebuilt API base
-            arrayOf(
-                "https://[::1]:8443/api/Plugin/authenticate?apiKey=k",
-                "https://[::1]:8443/api/Plugin/authenticate",
-                "https://[::1]:8443/api",
-            ),
-            // userinfo on Location must not be persisted
-            arrayOf(
-                "https://host/api/Plugin/authenticate?apiKey=k",
-                "https://user:pass@host/api/Plugin/authenticate",
-                "https://host/api",
-            ),
-            arrayOf(
-                "https://[2001:db8::1]/kavita/api/Plugin/authenticate?apiKey=k",
-                "https://[2001:db8::1]/kavita/api/Plugin/authenticate",
-                "https://[2001:db8::1]/kavita/api",
-            ),
-            // http allowed when request was already http
-            arrayOf(
-                "http://host/api/Plugin/authenticate?apiKey=k",
-                "http://host/api/Plugin/authenticate",
-                "http://host/api",
-            ),
-            // scheme upgrade http → https is OK
-            arrayOf(
-                "http://host/api/Plugin/authenticate?apiKey=k",
-                "https://host/api/Plugin/authenticate",
-                "https://host/api",
-            ),
-            // scheme DOWNgrade https → http rejected
-            arrayOf(
-                "https://host/api/Plugin/authenticate?apiKey=k",
-                "http://host/api/Plugin/authenticate",
-                null,
-            ),
-            // different host rejected
-            arrayOf(
-                "https://host/api/Plugin/authenticate?apiKey=k",
-                "https://evil.example/api/Plugin/authenticate",
-                null,
-            ),
-            // wrong path rejected
-            arrayOf(
-                "https://host/api/Plugin/authenticate?apiKey=k",
-                "https://host/api/other",
-                null,
-            ),
-            // empty / garbage
-            arrayOf(
-                "https://host/api/Plugin/authenticate?apiKey=k",
-                "",
-                null,
-            ),
-        )
+        fun data(): Collection<Array<Any?>> =
+            listOf(
+                // trailing-slash / scheme canonicalization on same host
+                arrayOf(
+                    "https://host/api/Plugin/authenticate?apiKey=k",
+                    "https://host/api/Plugin/authenticate",
+                    "https://host/api",
+                ),
+                // base path preserved
+                arrayOf(
+                    "https://host/kavita/api/Plugin/authenticate?apiKey=k",
+                    "https://host/kavita/api/Plugin/authenticate",
+                    "https://host/kavita/api",
+                ),
+                // relative Location (root-relative)
+                arrayOf(
+                    "https://host/api/Plugin/authenticate?apiKey=k",
+                    "/api/Plugin/authenticate",
+                    "https://host/api",
+                ),
+                // path-relative Location under a sub-path base
+                arrayOf(
+                    "https://host/kavita/api/Plugin/authenticate?apiKey=k",
+                    "../../api/Plugin/authenticate",
+                    "https://host/kavita/api",
+                ),
+                // port preserved when non-default
+                arrayOf(
+                    "https://host:8443/api/Plugin/authenticate?apiKey=k",
+                    "https://host:8443/api/Plugin/authenticate",
+                    "https://host:8443/api",
+                ),
+                // IPv6 literal must keep brackets in the rebuilt API base
+                arrayOf(
+                    "https://[::1]:8443/api/Plugin/authenticate?apiKey=k",
+                    "https://[::1]:8443/api/Plugin/authenticate",
+                    "https://[::1]:8443/api",
+                ),
+                // userinfo on Location must not be persisted
+                arrayOf(
+                    "https://host/api/Plugin/authenticate?apiKey=k",
+                    "https://user:pass@host/api/Plugin/authenticate",
+                    "https://host/api",
+                ),
+                arrayOf(
+                    "https://[2001:db8::1]/kavita/api/Plugin/authenticate?apiKey=k",
+                    "https://[2001:db8::1]/kavita/api/Plugin/authenticate",
+                    "https://[2001:db8::1]/kavita/api",
+                ),
+                // http allowed when request was already http
+                arrayOf(
+                    "http://host/api/Plugin/authenticate?apiKey=k",
+                    "http://host/api/Plugin/authenticate",
+                    "http://host/api",
+                ),
+                // scheme upgrade http → https is OK
+                arrayOf(
+                    "http://host/api/Plugin/authenticate?apiKey=k",
+                    "https://host/api/Plugin/authenticate",
+                    "https://host/api",
+                ),
+                // scheme DOWNgrade https → http rejected
+                arrayOf(
+                    "https://host/api/Plugin/authenticate?apiKey=k",
+                    "http://host/api/Plugin/authenticate",
+                    null,
+                ),
+                // different host rejected
+                arrayOf(
+                    "https://host/api/Plugin/authenticate?apiKey=k",
+                    "https://evil.example/api/Plugin/authenticate",
+                    null,
+                ),
+                // wrong path rejected
+                arrayOf(
+                    "https://host/api/Plugin/authenticate?apiKey=k",
+                    "https://host/api/other",
+                    null,
+                ),
+                // empty / garbage
+                arrayOf(
+                    "https://host/api/Plugin/authenticate?apiKey=k",
+                    "",
+                    null,
+                ),
+            )
     }
 }
 

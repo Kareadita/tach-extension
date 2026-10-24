@@ -16,7 +16,6 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
  * Result normalizes to the path form in [Parsed.normalizedAddress].
  */
 object OpdsUrlParser {
-
     private val PATH_DUPLICATE_SLASHES = Regex("/{2,}")
     private val API_OPDS_PATH = Regex("""(?i)/api/opds/""")
     private val REDACT_PATH_KEY = Regex("""(?i)(/api/opds/)[^/\s?#]+""")
@@ -34,10 +33,16 @@ object OpdsUrlParser {
         val normalizedAddress: String get() = "$serverBase/api/opds/$apiKey"
     }
 
-    sealed class ParseException(message: String) : Exception(message) {
+    sealed class ParseException(
+        message: String,
+    ) : Exception(message) {
         class BadForm : ParseException("bad_form")
+
         class MissingScheme : ParseException("missing_scheme")
-        class InvalidUrl(val value: String) : ParseException("invalid_url:$value")
+
+        class InvalidUrl(
+            val value: String,
+        ) : ParseException("invalid_url:$value")
     }
 
     fun parse(raw: String): Parsed {
@@ -56,18 +61,23 @@ object OpdsUrlParser {
         s = (head + tail).trimEnd('/')
 
         // Canonical path form: .../api/opds/<key>
-        val pathMatch = API_OPDS_PATH.find(s)
-            ?: throw ParseException.BadForm()
+        val pathMatch =
+            API_OPDS_PATH.find(s)
+                ?: throw ParseException.BadForm()
 
         val serverBase = s.substring(0, pathMatch.range.first).trimEnd('/')
-        val key = s.substring(pathMatch.range.last + 1)
-            .substringBefore('?')
-            .substringBefore('#')
-            .trim()
+        val key =
+            s.substring(pathMatch.range.last + 1)
+                .substringBefore('?')
+                .substringBefore('#')
+                .trim()
         return finish(serverBase, key)
     }
 
-    private fun finish(serverBase: String, key: String): Parsed {
+    private fun finish(
+        serverBase: String,
+        key: String,
+    ): Parsed {
         if (serverBase.isEmpty() || key.isEmpty() || key.contains('/')) {
             throw ParseException.BadForm()
         }
@@ -76,13 +86,14 @@ object OpdsUrlParser {
             throw ParseException.BadForm()
         }
         // Normalize: drop userinfo so credentials never land in prefs or exception messages.
-        val normalizedBase = serverBase.toHttpUrlOrNull()?.newBuilder()
-            ?.username("")
-            ?.password("")
-            ?.build()
-            ?.toString()
-            ?.trimEnd('/')
-            ?: throw ParseException.InvalidUrl(redact(serverBase))
+        val normalizedBase =
+            serverBase.toHttpUrlOrNull()?.newBuilder()
+                ?.username("")
+                ?.password("")
+                ?.build()
+                ?.toString()
+                ?.trimEnd('/')
+                ?: throw ParseException.InvalidUrl(redact(serverBase))
         return Parsed(serverBase = normalizedBase, apiKey = key)
     }
 
@@ -105,7 +116,10 @@ object OpdsUrlParser {
      * Rejects scheme downgrades (https → http) so the API key is never sent in cleartext
      * after a redirect. Strips any userinfo from Location so credentials are not persisted.
      */
-    fun resolveRedirectedApiUrl(requestUrl: String, location: String): String? {
+    fun resolveRedirectedApiUrl(
+        requestUrl: String,
+        location: String,
+    ): String? {
         if (location.isBlank()) return null
         val request = requestUrl.toHttpUrlOrNull() ?: return null
         // OkHttp resolves absolute, root-relative, and path-relative Locations.
@@ -137,9 +151,13 @@ object OpdsUrlParser {
     }
 
     /** Build Plugin/authenticate URL without string-encoding pitfalls. */
-    fun buildAuthenticateUrl(apiBase: String, apiKey: String): String {
-        val base = apiBase.trimEnd('/').toHttpUrlOrNull()
-            ?: return "${apiBase.trimEnd('/')}/Plugin/authenticate?apiKey=$apiKey&pluginName=Tachiyomi-Kavita"
+    fun buildAuthenticateUrl(
+        apiBase: String,
+        apiKey: String,
+    ): String {
+        val base =
+            apiBase.trimEnd('/').toHttpUrlOrNull()
+                ?: return "${apiBase.trimEnd('/')}/Plugin/authenticate?apiKey=$apiKey&pluginName=Tachiyomi-Kavita"
         return base.newBuilder()
             .addPathSegment("Plugin")
             .addPathSegment("authenticate")
