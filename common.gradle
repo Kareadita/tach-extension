@@ -22,6 +22,12 @@ android {
             res.srcDirs = ['res']
             assets.srcDirs = ['assets']
         }
+        // JVM unit tests live at <module>/test/ (sibling of main src/), not under src/,
+        // because main java.srcDirs = ['src'] would otherwise compile tests into the APK path.
+        test {
+            java.srcDirs = ['test']
+            resources.srcDirs = ['test/resources']
+        }
     }
 
     defaultConfig {

@@ -1,5 +1,6 @@
 [versions]
 commonsText = "1.14.0"
+junit = "4.13.2"
 kotlin = "1.7.21"
 coroutines = "1.6.4"
 serialization = "1.4.0"
@@ -24,6 +25,7 @@ injekt-core = { module = "com.github.null2264.injekt:injekt-core", version = "41
 rxjava = { module = "io.reactivex:rxjava", version = "1.3.8" }
 jsoup = { module = "org.jsoup:jsoup", version = "1.15.3" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version = "5.0.0-alpha.11" }
+junit = { module = "junit:junit", version.ref = "junit" }
 quickjs = { module = "app.cash.quickjs:quickjs-android", version = "0.9.2" }
 
 [bundles]
