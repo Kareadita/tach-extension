@@ -2268,6 +2268,36 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
 
         screen.addPreference(allowedLibrariesFeedPref)
         screen.addPreference(allowedLibrariesSearchPref)
+
+        runCatching {
+            SwitchPreferenceCompat(screen.context).apply {
+                key = "reset_preferences"
+                title = intl["pref_reset_title"]
+                summary = intl["pref_reset_summary"]
+                setOnPreferenceClickListener {
+                    runCatching {
+                        AlertDialog.Builder(screen.context)
+                            .setTitle(intl["dialog_reset_title"])
+                            .setMessage(intl["dialog_reset_message"])
+                            .setPositiveButton(intl["dialog_reset_positive"]) { _, _ ->
+                                resetAllPreferences()
+                                Toast.makeText(
+                                    screen.context,
+                                    intl["toast_settings_reset"],
+                                    Toast.LENGTH_LONG,
+                                ).show()
+                            }
+                            .setNegativeButton(intl["dialog_reset_negative"], null)
+                            .show()
+                    }.onFailure {
+                        Log.d(LOG_TAG, "Reset dialog unsupported on this host", it)
+                    }
+                    true
+                }
+            }.also(screen::addPreference)
+        }.onFailure {
+            Log.d(LOG_TAG, "Reset preference unsupported on this host", it)
+        }
     }
 
     private fun PreferenceScreen.editTextPreference(
