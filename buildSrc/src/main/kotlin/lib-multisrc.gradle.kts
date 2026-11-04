@@ -1,6 +1,5 @@
 plugins {
     id("com.android.library")
-    kotlin("android")
     id("kotlinx-serialization")
     id("org.jmailen.kotlinter")
 }
@@ -18,22 +17,23 @@ android {
         named("main") {
             manifest.srcFile("AndroidManifest.xml")
             java.setSrcDirs(listOf("src"))
+            kotlin.setSrcDirs(listOf("src"))
             res.setSrcDirs(listOf("res"))
             assets.setSrcDirs(listOf("assets"))
         }
     }
 
-    kotlinOptions {
-        freeCompilerArgs += "-opt-in=kotlinx.serialization.ExperimentalSerializationApi"
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 }
 
-kotlinter {
-    experimentalRules = true
-    disabledRules = arrayOf(
-        "experimental:argument-list-wrapping", // Doesn't play well with Android Studio
-        "experimental:comment-wrapping",
-    )
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        freeCompilerArgs.add("-opt-in=kotlinx.serialization.ExperimentalSerializationApi")
+    }
 }
 
 dependencies {
@@ -42,14 +42,8 @@ dependencies {
 }
 
 tasks {
-    preBuild {
-        dependsOn(lintKotlin)
-    }
-
-    if (System.getenv("CI") != "true") {
-        lintKotlin {
-            dependsOn(formatKotlin)
-        }
+    named("preBuild") {
+        dependsOn("lintKotlin")
     }
 }
 

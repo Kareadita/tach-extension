@@ -1,16 +1,15 @@
 [versions]
 commonsText = "1.14.0"
 junit = "4.13.2"
-kotlin = "1.7.21"
-coroutines = "1.6.4"
+kotlin = "2.4.20"
+coroutines = "1.11.0"
 serialization = "1.4.0"
-
 [libraries]
 commons-text = { module = "org.apache.commons:commons-text", version.ref = "commonsText" }
-gradle-agp = { module = "com.android.tools.build:gradle", version = "8.13.0" }
+gradle-agp = { module = "com.android.tools.build:gradle", version = "9.4.0" }
 gradle-kotlin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 gradle-serialization = { module = "org.jetbrains.kotlin:kotlin-serialization", version.ref = "kotlin" }
-gradle-kotlinter = { module = "org.jmailen.gradle:kotlinter-gradle", version = "3.13.0" }
+gradle-kotlinter = { module = "org.jmailen.gradle:kotlinter-gradle", version = "5.7.0" }
 
 tachiyomi-lib = { module = "com.github.komikku-app:extensions-lib", version = "1.7.1" }
 
