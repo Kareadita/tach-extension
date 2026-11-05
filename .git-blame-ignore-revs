@@ -1,0 +1,4 @@
+# Format-only commits (git config blame.ignoreRevsFile .git-blame-ignore-revs)
+# Full 40-character hashes required.
+
+0398858f627bb412dc8544e648ebe7768eda1d5c

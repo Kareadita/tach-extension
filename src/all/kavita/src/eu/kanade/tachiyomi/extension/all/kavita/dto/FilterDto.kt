@@ -13,13 +13,21 @@ data class FilterV2Dto(
     val sortOptions: SortOptions = SortOptions(),
     val limitTo: Int = 0,
 ) {
-    fun addStatement(comparison: FilterComparison, field: FilterField, value: String) {
+    fun addStatement(
+        comparison: FilterComparison,
+        field: FilterField,
+        value: String,
+    ) {
         if (value.isNotBlank()) {
             statements.add(FilterStatementDto(comparison.type, field.type, value))
         }
     }
 
-    fun addStatement(comparison: FilterComparison, field: FilterField, values: List<Any>) {
+    fun addStatement(
+        comparison: FilterComparison,
+        field: FilterField,
+        values: List<Any>,
+    ) {
         if (values.isNotEmpty()) {
             statements.add(FilterStatementDto(comparison.type, field.type, values.joinToString(",")))
         }
@@ -67,7 +75,9 @@ data class SortOptions(
 )
 
 @Serializable
-enum class SortFieldEnum(val type: Int) {
+enum class SortFieldEnum(
+    val type: Int,
+) {
     SortName(1),
     CreatedDate(2),
     LastModifiedDate(3),
@@ -82,6 +92,7 @@ enum class SortFieldEnum(val type: Int) {
 
     companion object {
         private val map = values().associateBy(SortFieldEnum::type)
+
         fun fromInt(type: Int) = map[type]
     }
 }
@@ -93,7 +104,9 @@ enum class FilterCombination {
 }
 
 @Serializable
-enum class FilterField(val type: Int) {
+enum class FilterField(
+    val type: Int,
+) {
     Summary(0),
     SeriesName(1),
     PublicationStatus(2),
@@ -136,7 +149,9 @@ enum class FilterField(val type: Int) {
 }
 
 @Serializable
-enum class FilterComparison(val type: Int) {
+enum class FilterComparison(
+    val type: Int,
+) {
     Equal(0),
     GreaterThan(1),
     GreaterThanEqual(2),
@@ -163,7 +178,9 @@ data class PersonSearchDto(
     val role: Int? = null,
 )
 
-enum class PersonRole(val id: Int) {
+enum class PersonRole(
+    val id: Int,
+) {
     Writer(0),
     Penciller(1),
     Inker(2),
@@ -178,12 +195,13 @@ enum class PersonRole(val id: Int) {
 
     companion object {
         private val map = values().associateBy(PersonRole::id)
+
         fun fromId(id: Int): PersonRole? = map[id]
     }
 }
 
-fun PersonRole.toFilterField(): FilterField? {
-    return when (this) {
+fun PersonRole.toFilterField(): FilterField? =
+    when (this) {
         PersonRole.Writer -> FilterField.Writers
         PersonRole.Penciller -> FilterField.Penciller
         PersonRole.Inker -> FilterField.Inker
@@ -195,4 +213,3 @@ fun PersonRole.toFilterField(): FilterField? {
         PersonRole.Character -> FilterField.Characters
         PersonRole.Translator -> FilterField.Translators
     }
-}

@@ -1,6 +1,5 @@
 plugins {
     id("com.android.library")
-    kotlin("android")
 }
 
 android {
@@ -15,6 +14,7 @@ android {
     sourceSets {
         named("main") {
             java.setSrcDirs(listOf("src"))
+            kotlin.setSrcDirs(listOf("src"))
         }
     }
 
@@ -23,8 +23,16 @@ android {
         shaders = false
     }
 
-    kotlinOptions {
-        freeCompilerArgs += "-opt-in=kotlinx.serialization.ExperimentalSerializationApi"
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        freeCompilerArgs.add("-opt-in=kotlinx.serialization.ExperimentalSerializationApi")
     }
 }
 
