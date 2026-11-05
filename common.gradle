@@ -38,7 +38,7 @@ android {
         Integer kmkVersionCode = project.ext.find("kmkVersionCode") ?: 0
         Integer kmkBaseVersionCode = theme == null ? 0 : theme.ext.find("kmkBaseVersionCode") ?: 0
         versionCode theme == null ? extVersionCode + kmkVersionCode : theme.baseVersionCode + overrideVersionCode + kmkBaseVersionCode + kmkVersionCode
-        versionName "1.4.$versionCode"
+        versionName "1.6.$versionCode"
         base {
             archivesName = "tachiyomi-$applicationIdSuffix-v$versionName"
         }
@@ -48,6 +48,8 @@ android {
                 extName : extName,
                 extClass: extClass,
                 nsfw    : project.ext.find("isNsfw") ? 1 : 0,
+                // tachiyomix: 0 SAFE, 1 MIXED, 2 NSFW (legacy nsfw flag is 0/1)
+                contentWarning: project.ext.find("isNsfw") ? 2 : 0,
         ]
         String baseUrl = project.ext.find("baseUrl") ?: ""
         if (theme != null && !baseUrl.isEmpty()) {

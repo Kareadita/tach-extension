@@ -7,6 +7,9 @@
 
         <meta-data android:name="tachiyomi.extension.class" android:value="${extClass}" />
         <meta-data android:name="tachiyomi.extension.nsfw" android:value="${nsfw}" />
+        <meta-data android:name="tachiyomix.name" android:value="${extName}" />
+        <meta-data android:name="tachiyomix.contentWarning" android:value="${contentWarning}" />
+        <meta-data android:name="tachiyomix.extensionLib" android:value="1.6" />
 
     </application>
 
