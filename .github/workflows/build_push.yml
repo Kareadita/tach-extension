@@ -11,6 +11,10 @@ on:
       - '!.github/**'
       - '.github/scripts/**'
       - '.github/workflows/build_push.yml'
+      - '!LICENSE'
+      - '!.gitignore'
+      - '!.gitattributes'
+      - '!.pre-commit-config.yaml'
   # Manual trigger
   workflow_dispatch:
 

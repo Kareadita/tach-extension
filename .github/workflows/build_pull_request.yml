@@ -6,7 +6,12 @@ on:
       - '**'
       - '!**.md'
       - '!.github/**'
+      - '.github/scripts/**'
       - '.github/workflows/build_pull_request.yml'
+      - '!LICENSE'
+      - '!.gitignore'
+      - '!.gitattributes'
+      - '!.pre-commit-config.yaml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
