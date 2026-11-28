@@ -92,11 +92,16 @@ jobs:
           cache-read-only: ${{ matrix.chunk.number > 1 }}
 
       - name: Prepare signing key
+        # Secrets go through env so shell metacharacters (e.g. $) in passwords are not expanded.
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          ALIAS: ${{ secrets.ALIAS }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
         run: |
-          echo "${{ secrets.SIGNING_KEY }}" | base64 -di > signingkey.jks
+          printf '%s' "$SIGNING_KEY" | base64 -di > signingkey.jks
           # Verify key is properly created
           ls -la signingkey.jks
-          keytool -list -v -keystore signingkey.jks -storepass "${{ secrets.KEY_STORE_PASSWORD }}" -alias "${{ secrets.ALIAS }}" || exit 1
+          keytool -list -v -keystore signingkey.jks -storepass:env KEY_STORE_PASSWORD -alias "$ALIAS" || exit 1
 
       - name: Build extensions (${{ matrix.chunk.number }})
         env:
@@ -108,7 +113,7 @@ jobs:
 
       - name: Upload APKs (${{ matrix.chunk.number }})
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        if: github.repository == 'Kareadita/tach-extension'
+        if: github.repository == 'Kareadita/tach-extension' || vars.PUBLISH_REPO == 'true'
         with:
           name: "individual-apks-${{ matrix.chunk.number }}"
           path: "**/*.apk"
@@ -144,7 +149,7 @@ jobs:
   publish:
     name: Publish extension repo
     needs: [prepare, build, unit-test]
-    if: github.repository == 'Kareadita/tach-extension'
+    if: github.repository == 'Kareadita/tach-extension' || vars.PUBLISH_REPO == 'true'
     runs-on: 'ubuntu-24.04'
     steps:
       - name: Download APK artifacts
@@ -176,7 +181,7 @@ jobs:
       - name: Checkout repo branch
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          repository: Kareadita/tach-extension
+          repository: ${{ github.repository }}
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: repo
           path: repo
@@ -196,4 +201,4 @@ jobs:
 
       - name: Purge cached index on jsDelivr
         run: |
-          curl https://purge.jsdelivr.net/gh/Kareadita/tach-extension@repo/index.min.json
+          curl https://purge.jsdelivr.net/gh/${{ github.repository }}@repo/index.min.json
