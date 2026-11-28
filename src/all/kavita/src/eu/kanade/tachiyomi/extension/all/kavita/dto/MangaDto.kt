@@ -195,9 +195,14 @@ data class VolumeDto(
     val lastModified: String,
     val created: String,
     val seriesId: Int,
-    val coverImage: String,
+    // Kavita < 0.9.1.24 sends the cover file name; newer servers send hasCoverImage instead.
+    val coverImage: String? = null,
+    val hasCoverImage: Boolean? = null,
     val chapters: List<ChapterDto> = emptyList(),
-)
+) {
+    val hasCover: Boolean
+        get() = hasCoverImage ?: !coverImage.isNullOrBlank()
+}
 
 @Serializable
 enum class ChapterType {
@@ -247,7 +252,9 @@ data class ChapterDto(
     val titleName: String?,
     val pagesRead: Int,
     val coverImageLocked: Boolean,
-    val coverImage: String,
+    // Kavita < 0.9.1.24 sends the cover file name; newer servers send hasCoverImage instead.
+    val coverImage: String? = null,
+    val hasCoverImage: Boolean? = null,
     val volumeId: Int,
     val created: String,
     val lastModifiedUtc: String,
@@ -256,6 +263,9 @@ data class ChapterDto(
 ) {
     val fileCount: Int
         get() = files?.size ?: 0
+
+    val hasCover: Boolean
+        get() = hasCoverImage ?: !coverImage.isNullOrBlank()
 }
 
 @Serializable
