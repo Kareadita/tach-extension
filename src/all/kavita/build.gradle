@@ -2,7 +2,7 @@ ext {
     kmkVersionCode = 1
     extName = 'Kavita'
     extClass = '.KavitaFactory'
-    extVersionCode = 28
+    extVersionCode = 29
     isNsfw = false
 }
 
@@ -19,4 +19,5 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlin.stdlib)
     testImplementation(libs.okhttp)
+    testImplementation(libs.kotlin.json)
 }

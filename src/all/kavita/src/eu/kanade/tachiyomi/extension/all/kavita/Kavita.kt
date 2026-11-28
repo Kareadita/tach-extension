@@ -1084,7 +1084,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                 // Issue: use chapter covers
                 if (isComicLibrary && volume.minNumber.toInt() == KavitaConstants.UNNUMBERED_VOLUME) {
                     for (chapter in volume.chapters) {
-                        if (chapter.coverImage.isNotBlank()) {
+                        if (chapter.hasCover) {
                             val url = "$apiUrl/Image/chapter-cover?chapterId=${chapter.id}&apiKey=$apiKey"
                             coverCandidates.add(
                                 Triple(url, chapter.pagesRead < chapter.pages, chapter.number.toFloatOrNull() ?: 0f),
@@ -1098,7 +1098,7 @@ class Kavita(private val suffix: String = "") : ConfigurableSource, UnmeteredSou
                     val hasSingleFile = volume.chapters.any { chapter ->
                         ChapterType.of(chapter, volume) == ChapterType.SingleFileVolume
                     }
-                    if (hasSingleFile && volume.coverImage.isNotBlank()) {
+                    if (hasSingleFile && volume.hasCover) {
                         val url = "$apiUrl/Image/volume-cover?volumeId=${volume.id}&apiKey=$apiKey"
                         val isUnread = volume.pagesRead < volume.pages
                         val number = volume.minNumber.toFloat()
